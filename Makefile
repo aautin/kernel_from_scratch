@@ -5,7 +5,7 @@ AS       := nasm
 LD       := ld
 
 CDEFAULTFLAGS := -Wall -Wextra -Werror
-CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-builtin -nostdlib -m32
+CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-builtin -nostdlib -m32 -g
 ASFLAGS       := -f elf32
 LDFLAGS       := -m elf_i386 
 
