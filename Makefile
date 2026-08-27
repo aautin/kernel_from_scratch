@@ -1,3 +1,9 @@
+DOCKER_IMAGE = kfs-build:latest
+DOCKER_WORKDIR = /kfs-build
+DOCKER_RUN = docker run --rm -v $(PWD):$(DOCKER_WORKDIR) -w $(DOCKER_WORKDIR) $(DOCKER_IMAGE)
+
+
+
 SRC_DIR = src
 OBJ_DIR = obj
 BUILD_DIR = build
@@ -5,9 +11,7 @@ BUILD_DIR = build
 GCC = gcc
 CFLAGS = -m32 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -nostdlib -nodefaultlibs
 
-
-
-all : $(OBJ_DIR) $(BUILD_DIR) $(BUILD_DIR)/kernel.bin
+all : $(OBJ_DIR) $(BUILD_DIR) $(BUILD_DIR)/kfs kfs.iso
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -23,10 +27,23 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 	nasm -f elf32 $< -o $@
 
 # Generation of the final kernel binary
-$(BUILD_DIR)/kernel.bin: $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o
+$(BUILD_DIR)/kfs: $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o
 	ld -m elf_i386 -T linker.ld -o $@ $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o
 
-clean:
-	rm -rf $(OBJ_DIR) $(BUILD_DIR)
+kfs.iso: docker-build $(BUILD_DIR)/kfs
+	mkdir -p iso/boot/grub
+	cp $(BUILD_DIR)/kfs iso/boot/kfs
+	cp boot/grub/grub.cfg iso/boot/grub/grub.cfg
+	$(DOCKER_RUN) grub-mkrescue -o kfs.iso iso #replace by grub2-mkrescue for fedora
 
-.PHONY: all clean
+run: kfs.iso
+	qemu-system-i386 -cdrom kfs.iso
+
+docker-build:
+	docker build -t $(DOCKER_IMAGE) -f Dockerfile .
+
+clean:
+	rm -rf $(OBJ_DIR) $(BUILD_DIR) iso
+	rm -f kfs.iso
+
+.PHONY: all clean docker-build run
