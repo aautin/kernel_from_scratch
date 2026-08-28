@@ -2,14 +2,13 @@ DOCKER_IMAGE = kfs-build:latest
 DOCKER_WORKDIR = /kfs-build
 DOCKER_RUN = docker run --rm -v $(PWD):$(DOCKER_WORKDIR) -w $(DOCKER_WORKDIR) $(DOCKER_IMAGE)
 
-
-
 SRC_DIR = src
 OBJ_DIR = obj
 BUILD_DIR = build
 
 GCC = gcc
 CFLAGS = -m32 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -nostdlib -nodefaultlibs
+INCLUDE_DIRS = -Iinclude
 
 all : $(OBJ_DIR) $(BUILD_DIR) $(BUILD_DIR)/kfs kfs.iso
 
@@ -21,20 +20,21 @@ $(BUILD_DIR):
 
 # Compilation rules for C and assembly files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(GCC) $(CFLAGS) -c $< -o $@
+	$(GCC) $(CFLAGS) $(INCLUDE_DIRS) -c $< -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 	nasm -f elf32 $< -o $@
 
 # Generation of the final kernel binary
-$(BUILD_DIR)/kfs: $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o
-	ld -m elf_i386 -T linker.ld -o $@ $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o
+$(BUILD_DIR)/kfs: $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o $(OBJ_DIR)/lib.o $(OBJ_DIR)/tty.o 
+	ld -m elf_i386 -T linker.ld -o $@ $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o $(OBJ_DIR)/lib.o $(OBJ_DIR)/tty.o
 
 kfs.iso: docker-build $(BUILD_DIR)/kfs
 	mkdir -p iso/boot/grub
 	cp $(BUILD_DIR)/kfs iso/boot/kfs
 	cp boot/grub/grub.cfg iso/boot/grub/grub.cfg
-	$(DOCKER_RUN) grub-mkrescue -o kfs.iso iso #replace by grub2-mkrescue for fedora
+	$(DOCKER_RUN) grub-mkrescue -o kfs.iso iso --modules="normal multiboot" --locales="" --fonts=""
+	#replace by grub2-mkrescue for fedora
 
 run: kfs.iso
 	qemu-system-i386 -cdrom kfs.iso
@@ -47,3 +47,4 @@ clean:
 	rm -f kfs.iso
 
 .PHONY: all clean docker-build run
+
