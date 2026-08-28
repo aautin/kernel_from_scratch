@@ -15,10 +15,10 @@ OBJ_PATH := obj
 
 LD_SCRIPT := linker.ld
 
-C_SRC_FILES  := kernel/main
+C_SRC_FILES  := kernel/main kernel/vga kernel/interrupt kernel/gdt kernel/pic
 C_SRC        := $(addsuffix .c, $(addprefix $(SRC_PATH)/, $(C_SRC_FILES)))
 
-AS_SRC_FILES := boot
+AS_SRC_FILES := boot gdt irq_stub
 AS_SRC       := $(addsuffix .asm, $(addprefix $(SRC_PATH)/, $(AS_SRC_FILES)))
 
 SRC := $(C_SRC) $(AS_SRC)

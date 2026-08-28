@@ -1,37 +1,15 @@
 #include <stdbool.h>
 
 #include "multiboot.h"
+#include "interrupt.h"
+#include "vga.h"
+#include "gdt.h"
+#include "pic.h"
 
-static uint32_t write_index = 0;
+extern uint32_t irq1_stub();
+extern void     init_gdt();
 
-static void write_debug_message(const char *message)
-{
-	volatile uint16_t *video_memory = (volatile uint16_t *) 0xB8000;
-
-	for (uint32_t index = 0; message[index] != '\0'; index++)
-	{
-		if (write_index >= 80 * 25)
-		{
-			for (uint32_t i = 0; i < 80 * 25; i++)
-			{
-				video_memory[i] = (uint16_t) ' ' | 0x0F00;
-			}
-
-			write_index = 0;
-		}
-
-		if (message[index] == '\n')
-		{
-			write_index += 80 - (write_index % 80);
-			continue;
-		}
-
-		video_memory[write_index] = (uint16_t) message[index] | 0x0F00;
-		write_index++;
-	}
-}
-
-void kernel_main(struct multiboot_info *mbi)
+void kernel_main(struct multiboot_info* mbi)
 {
 	write_debug_message("Kernel booted successfully\n");
 	
@@ -65,17 +43,26 @@ void kernel_main(struct multiboot_info *mbi)
 		write_debug_message("MULTIBOOT_INFO_MEM_MAP activated\n");
 	}
 
+	set_gdt();
+	register_gdt();
+	init_gdt();
+
+	remap_pic();
+
+	set_interrupt_descriptor(INTERRUPT_VECTOR_KEYBOARD, (uint32_t) irq1_stub);
+	register_interrupt_descriptor_table();
+
+	__asm__ volatile ("sti");
+	
 	while (true)
 	{
+
 		//
 		// Halt instruction to stop the CPU until the next interrupt occurs.
 		// Kernel development common practice to prevent running idle loops and wasting power.
 		//
 		__asm__ volatile ("hlt");
 
-		//
-		// TODO
-		// Handle interrupts from the keyboard
-		//
+		write_debug_message("*");
 	}
 }
