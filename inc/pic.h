@@ -41,6 +41,8 @@
 		IMR  — decide which IRQ lines are enabled or masked.
 */
 
+#define PIC_OFFSET 0x20
+
 enum pic_port
 {
 	PIC_MASTER_COMMAND = 0x20,
@@ -84,8 +86,8 @@ enum pic_icw1
 
 enum pic_icw2
 {
-	ICW2_MASTER_VECTOR_OFFSET = 0x20, // 32 = 0x20
-	ICW2_SLAVE_VECTOR_OFFSET  = 0x28  // 32 + 8 = 40 = 0x28
+	ICW2_MASTER_VECTOR_OFFSET = PIC_OFFSET,
+	ICW2_SLAVE_VECTOR_OFFSET  = PIC_OFFSET + 8
 };
 
 enum pic_icw3

@@ -1,17 +1,14 @@
-#include <stdbool.h>
-
 #include "multiboot.h"
-#include "interrupt.h"
-#include "vga.h"
+#include "idt.h"
+#include "io.h"
 #include "gdt.h"
 #include "pic.h"
 
 extern uint32_t irq1_stub();
-extern void     init_gdt();
 
 void kernel_main(struct multiboot_info* mbi)
 {
-	write_debug_message("Kernel booted successfully\n");
+	vga_puts("Kernel booted successfully\n");
 	
 	if (mbi->flags & MULTIBOOT_INFO_MEMORY)
 	{
@@ -24,8 +21,6 @@ void kernel_main(struct multiboot_info* mbi)
 		// TODO
 		// Output the lower and upper memory information to the debug console
 		//
-
-		write_debug_message("MULTIBOOT_INFO_MEMORY activated\n");
 	}
 
 	if (mbi->flags & MULTIBOOT_INFO_MEM_MAP)
@@ -39,13 +34,10 @@ void kernel_main(struct multiboot_info* mbi)
 		// TODO
 		// Output the memory map information to the debug console
 		//
-		
-		write_debug_message("MULTIBOOT_INFO_MEM_MAP activated\n");
 	}
 
 	set_gdt();
 	register_gdt();
-	init_gdt();
 
 	remap_pic();
 
@@ -56,13 +48,10 @@ void kernel_main(struct multiboot_info* mbi)
 	
 	while (true)
 	{
-
 		//
 		// Halt instruction to stop the CPU until the next interrupt occurs.
-		// Kernel development common practice to prevent running idle loops and wasting power.
+		// Kernel development common practice to prevent running idle loops.
 		//
 		__asm__ volatile ("hlt");
-
-		write_debug_message("*");
 	}
 }

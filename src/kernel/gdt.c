@@ -1,14 +1,16 @@
 #include "gdt.h"
 
 static gdt_entry_t gdt[5];
-gdt_ptr_t   gdt_ptr;
+gdt_ptr_t          gdt_ptr;
+
+extern void init_gdt();
 
 void register_gdt()
 {
 	gdt_ptr.limit = sizeof(gdt) - 1;
 	gdt_ptr.base  = (uint32_t) &gdt;
 
-	asm volatile("lgdt %0" : : "m" (gdt_ptr));
+	init_gdt();
 }
 
 void set_gdt()
@@ -18,7 +20,8 @@ void set_gdt()
 	//
 	set_gdt_entry(NULL_I,
 		ADDRESS_MIN, ADDRESS_MIN,
-		0, 0);
+		0, 0
+	);
 
 	//
 	// Kernel code segment
