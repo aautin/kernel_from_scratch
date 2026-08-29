@@ -7,6 +7,7 @@ enum multiboot_flags
 	MULTIBOOT_INFO_MEMORY  = 0x00000001,
 	MULTIBOOT_INFO_MEM_MAP = 0x00000040,
 };
+typedef enum multiboot_flags multiboot_flags_t;
 
 struct multiboot_info
 {
@@ -58,3 +59,4 @@ struct multiboot_info
     uint16_t framebuffer_reserved;
 //-------------------------------------------//
 };
+typedef struct multiboot_info multiboot_info_t;

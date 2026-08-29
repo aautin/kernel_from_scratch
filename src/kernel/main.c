@@ -39,7 +39,7 @@ void kernel_main(struct multiboot_info* mbi)
 		// TODO
 		// Output the memory map information to the debug console
 		//
-
+		
 		write_debug_message("MULTIBOOT_INFO_MEM_MAP activated\n");
 	}
 

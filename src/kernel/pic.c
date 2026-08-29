@@ -1,67 +1,67 @@
 #include "pic.h"
-
-static inline void outb(uint16_t port, uint8_t value)
-{
-    __asm__ volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
-}
-
-static inline uint8_t inb(uint16_t port)
-{
-    uint8_t value;
-    __asm__ volatile ("inb %1, %0" : "=a"(value) : "Nd"(port));
-    return value;
-}
-
-static inline void io_wait()
-{
-    outb(0x80, 0);
-}
+#include "io.h"
 
 void remap_pic()
 {
-
-	outb(PIC_MASTER_COMMAND, 0x11);
-    io_wait();
-	outb(PIC_SLAVE_COMMAND, 0x11);
-    io_wait();
-
 	//
-	// TODO
-	// Improve remap process understanding
+	// ICW1
 	//
+	outb(PIC_MASTER_COMMAND, ICW1_BIT_ICW4 | ICW1_BIT_INITIALIZATION);
+    io_wait();
+	outb(PIC_SLAVE_COMMAND, ICW1_BIT_ICW4 | ICW1_BIT_INITIALIZATION);
+    io_wait();
 	
 	//
+	// ICW2
 	// Master IRQs become vectors 0x20-0x27
-	// the first 32 vectors are reserved for CPU exceptions
-	//
-	outb(PIC_MASTER_MASK, REMAP_OFFSET_MASTER);
-    io_wait();
-	//
 	// Slave IRQs become vectors 0x28-0x2F
 	//
-	outb(PIC_SLAVE_MASK, REMAP_OFFSET_SLAVE);
+	outb(PIC_MASTER_DATA, ICW2_MASTER_VECTOR_OFFSET);
+    io_wait();
+	outb(PIC_SLAVE_DATA, ICW2_SLAVE_VECTOR_OFFSET);
     io_wait();
 	
 	//
-	// Master has slave connected to IRQ2
+	// ICW3
+	// Slave connected to master's IRQ2, and vice versa.
 	//
-	outb(PIC_MASTER_MASK, PIC_MASTER_MASK_SLAVE);
+	outb(PIC_MASTER_DATA, ICW3_SLAVE_CONNECTED_TO_IRQ2);
     io_wait();
-	//
-	// Slave is connected to master's IRQ2
-	//
-	outb(PIC_SLAVE_MASK, PIC_SLAVE_MASK_IRQ2);
+	outb(PIC_SLAVE_DATA, ICW3_SLAVE_CONNECTED_TO_MASTER_IRQ2);
     io_wait();
 
 	//
+	// ICW4
 	// Set the PICs to operate in 8086/88 (MCS-80/85) mode.
 	//
-	outb(PIC_MASTER_MASK, 0x01);
+	//
+	outb(PIC_MASTER_DATA, ICW4_BIT_8086_MODE);
     io_wait();
-	outb(PIC_SLAVE_MASK, 0x01);
+	outb(PIC_SLAVE_DATA, ICW4_BIT_8086_MODE);
     io_wait();
 	
-    // Restore masks, but enable keyboard IRQ1.
-    outb(0x21, 0xFD); // Enable IRQ1, disable other master IRQs
-	outb(0xA1, 0xFF); // Disable all slave IRQs
+	//
+    // IMR
+	// Enable IRQ1 (keyboard) and disable all other IRQs on both IPCs.
+	//
+    outb(PIC_MASTER_DATA,
+		  IMR_BIT_DISABLE_IRQ0
+		// IRQ1 doesn't get disabled
+		| IMR_BIT_DISABLE_IRQ2
+		| IMR_BIT_DISABLE_IRQ3
+		| IMR_BIT_DISABLE_IRQ4
+		| IMR_BIT_DISABLE_IRQ5
+		| IMR_BIT_DISABLE_IRQ6
+		| IMR_BIT_DISABLE_IRQ7
+	);
+    outb(PIC_SLAVE_DATA,
+		  IMR_BIT_DISABLE_IRQ0
+		| IMR_BIT_DISABLE_IRQ1
+		| IMR_BIT_DISABLE_IRQ2
+		| IMR_BIT_DISABLE_IRQ3
+		| IMR_BIT_DISABLE_IRQ4
+		| IMR_BIT_DISABLE_IRQ5
+		| IMR_BIT_DISABLE_IRQ6
+		| IMR_BIT_DISABLE_IRQ7
+	);
 }

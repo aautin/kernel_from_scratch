@@ -15,7 +15,8 @@ OBJ_PATH := obj
 
 LD_SCRIPT := linker.ld
 
-C_SRC_FILES  := kernel/main kernel/vga kernel/interrupt kernel/gdt kernel/pic
+C_SRC_KERNEL_FILES := main vga interrupt gdt pic io
+C_SRC_FILES  := $(addprefix kernel/, $(C_SRC_KERNEL_FILES))
 C_SRC        := $(addsuffix .c, $(addprefix $(SRC_PATH)/, $(C_SRC_FILES)))
 
 AS_SRC_FILES := boot gdt irq_stub
