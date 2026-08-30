@@ -66,4 +66,3 @@ typedef struct interrupt_descriptor_table_pointer idt_ptr_t;
 
 void register_interrupt_descriptor_table();
 void set_interrupt_descriptor(enum interrupt_vector_index index, uint32_t handler);
-void keyboard_interrupt_handler(uint32_t interrupt_number);

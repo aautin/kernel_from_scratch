@@ -1,16 +1,31 @@
 #include "gdt.h"
 
-static gdt_entry_t gdt[5];
-gdt_ptr_t          gdt_ptr;
+#define GDT_ENTRIES 5 
 
-extern void init_gdt();
+gdt_entry_t gdt[GDT_ENTRIES];
+gdt_ptr_t   gdt_ptr;
 
 void register_gdt()
 {
-	gdt_ptr.limit = sizeof(gdt) - 1;
-	gdt_ptr.base  = (uint32_t) &gdt;
+    gdt_ptr.limit = (uint16_t)(sizeof(gdt) - 1);
+    gdt_ptr.base  = (uint32_t)gdt;
 
-	init_gdt();
+    __asm__ volatile ("lgdt %0" : : "m"(gdt_ptr));
+
+    __asm__ volatile
+	(
+        "jmp $0x08, $.reload_segments\n"
+        ".reload_segments:\n"
+        "mov $0x10, %%ax\n"
+        "mov %%ax, %%ds\n"
+        "mov %%ax, %%es\n"
+        "mov %%ax, %%fs\n"
+        "mov %%ax, %%gs\n"
+        "mov %%ax, %%ss\n"
+        :
+        :
+        : "eax", "memory"
+    );
 }
 
 void set_gdt()
@@ -56,7 +71,7 @@ void set_gdt()
 	);
 }
 
-void set_gdt_entry(selector_index index, uint32_t base, uint32_t limit,
+void set_gdt_entry(selector_i index, uint32_t base, uint32_t limit,
 					uint8_t access, uint8_t granularity)
 {
 	gdt[index].base_low    = (base & 0xFFFF);

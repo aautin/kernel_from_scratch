@@ -4,9 +4,9 @@
 
 section .text
 
-	MASTER_PIC_COMMAND_REGISTER equ 0x20
-	END_OF_INTERRUPT_COMMAND    equ 0x20
-	KEYBOARD_DATA_PORT          equ 0x60
+	MASTER_PIC_COMMAND_REGISTER   equ 0x20
+	END_OF_INTERRUPT_COMMAND      equ 0x20
+	KEYBOARD_CONTROLLER_DATA_PORT equ 0x60
 
 	; irq1 is the keyboard interrupt.
 	global irq1_stub
@@ -18,7 +18,7 @@ section .text
 		pusha
 
 		; Reads the keyboard scancode and passes it the handler 
-		in al, KEYBOARD_DATA_PORT
+		in al, KEYBOARD_CONTROLLER_DATA_PORT
 		movzx eax, al
 		push eax
 		call keyboard_interrupt_handler

@@ -13,22 +13,24 @@ INC_PATH := inc
 SRC_PATH := src
 OBJ_PATH := obj
 
-LD_SCRIPT := linker.ld
+LD_SCRIPT := $(SRC_PATH)/misc/linker.ld
 
-C_SRC_FILES  := kernel/main \
+C_SRC_FILES  := kernel/boot/main \
 				\
-				kernel/idt \
-				kernel/pic \
 				kernel/gdt \
 				\
-				kernel/keyboard \
+				kernel/interrupt/idt \
+				kernel/interrupt/pic \
+				kernel/interrupt/handler/keyboard \
 				\
 				kernel/io/vga \
 				kernel/io/port
 
 C_SRC        := $(addsuffix .c, $(addprefix $(SRC_PATH)/, $(C_SRC_FILES)))
 
-AS_SRC_FILES := boot gdt irq_stub
+AS_SRC_FILES := kernel/boot/multiboot \
+				kernel/interrupt/handler/irq_stub
+
 AS_SRC       := $(addsuffix .asm, $(addprefix $(SRC_PATH)/, $(AS_SRC_FILES)))
 
 SRC := $(C_SRC) $(AS_SRC)
@@ -40,11 +42,11 @@ ISO_PATH := iso
 ISO_FILE := bootable_kernel.iso
 ISO      := $(ISO_PATH)/$(ISO_FILE)
 
-GRUB_CFG := grub.cfg
+GRUB_CFG := $(SRC_PATH)/misc/grub.cfg
 
 ISO_SRC := $(ISO_PATH)/boot/$(NAME) $(ISO_PATH)/boot/grub/$(GRUB_CFG)
 
-DOCKERFILE   := Dockerfile
+DOCKERFILE   := $(SRC_PATH)/misc/Dockerfile
 DOCKER_IMAGE := kfs-builder
 DOCKER_CMD   := grub-mkrescue -o $(ISO_FILE) $(ISO_PATH)
 

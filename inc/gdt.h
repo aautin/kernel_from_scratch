@@ -10,7 +10,7 @@ enum gdt_selector_index
 	USER_CODE_I   = 3,
 	USER_DATA_I   = 4,
 };
-typedef enum gdt_selector_index selector_index;
+typedef enum gdt_selector_index selector_i;
 
 enum gdt_selector_offset
 {
@@ -66,9 +66,7 @@ struct gdt_ptr
 } __attribute__((packed));
 typedef struct gdt_ptr gdt_ptr_t;
 
-uint32_t get_gdt_offset(enum gdt_selector_index index);
-
 void register_gdt();
 void set_gdt();
-void set_gdt_entry(selector_index index, uint32_t base, uint32_t limit,
-					uint8_t access, uint8_t granularity);
+void set_gdt_entry(selector_i index, uint32_t base, uint32_t limit,
+			uint8_t access, uint8_t granularity);
