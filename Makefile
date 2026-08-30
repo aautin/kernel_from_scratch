@@ -9,7 +9,7 @@ CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-builtin -nostdlib -m32 -g
 ASFLAGS       := -f elf32
 LDFLAGS       := -m elf_i386 
 
-INC_PATH := inc
+INC_PATH := inc inc/helper
 SRC_PATH := src
 OBJ_PATH := obj
 
@@ -24,7 +24,10 @@ C_SRC_FILES  := kernel/boot/main \
 				kernel/interrupt/handler/keyboard \
 				\
 				kernel/io/vga \
-				kernel/io/port
+				kernel/io/port \
+				\
+				kernel/helper/char \
+				kernel/helper/string
 
 C_SRC        := $(addsuffix .c, $(addprefix $(SRC_PATH)/, $(C_SRC_FILES)))
 
@@ -37,6 +40,7 @@ SRC := $(C_SRC) $(AS_SRC)
 
 C_OBJS  := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(C_SRC_FILES)))
 AS_OBJS := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(AS_SRC_FILES)))
+INC_ARGS := $(addprefix -I, $(INC_PATH))
 
 ISO_PATH := iso
 ISO_FILE := bootable_kernel.iso
@@ -68,7 +72,7 @@ $(OBJ_PATH)/%.o: $(SRC_PATH)/%.asm
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
 	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -I$(INC_PATH) $< -o $@
+	$(CC) $(CFLAGS) -c $(INC_ARGS) $< -o $@
 
 $(ISO_SRC): $(NAME) $(GRUB_CFG)
 	mkdir -p $(ISO_PATH)/boot/grub

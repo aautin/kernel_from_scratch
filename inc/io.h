@@ -12,6 +12,16 @@ void    io_wait();
 //
 // I/O on VGA
 //
+enum direction
+{
+	VGA_CURSOR_LEFT,
+	VGA_CURSOR_RIGHT,
+	VGA_CURSOR_UP,
+	VGA_CURSOR_DOWN,
+};
+
+void    vga_clear_screen(void);
+void    vga_move_cursor(enum direction direction);
 void    vga_remove_last_character();
 void    vga_putc(uint16_t c);
 void    vga_putnbr(int32_t number);

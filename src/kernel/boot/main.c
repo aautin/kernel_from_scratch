@@ -28,13 +28,15 @@ void kernel_main(struct multiboot_info* mbi)
 	//
 	__asm__ volatile ("cli");
 
+	vga_clear_screen();
+
 	vga_puts("Kernel booted successfully\n");
 	
 	if (mbi->flags & MULTIBOOT_INFO_MEMORY)
 	{
 		uint32_t lower_memory = mbi->mem_lower;
 		uint32_t upper_memory = mbi->mem_upper;
-
+		
 		(void) lower_memory;
 		(void) upper_memory;
 		//

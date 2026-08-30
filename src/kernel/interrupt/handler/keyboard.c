@@ -1,17 +1,25 @@
+#include <stdbool.h>
+
 #include "io.h"
+#include "char.h"
 
 #define KEY_RELEASED_MASK 0x80
 
 enum keyboard_special_scancode
 {
-	KEY_CAPS      = 0x3A, // Toggle caps lock state
-	KEY_TAB       = 0x0F, // Switch screen
-	KEY_CTRL      = 0x1D, // Switch color scheme
-	KEY_BACKSPACE = 0x0E, // Delete last character
-	KEY_SPACE     = 0x39, // Put a space character
+	KEY_CAPS        = 0x3A, // Toggle caps lock state
+	KEY_TAB         = 0x0F, // Switch screen
+	KEY_CTRL        = 0x1D, // Switch color scheme
+	KEY_BACKSPACE   = 0x0E, // Delete last character
+	KEY_SPACE       = 0x39, // Put a space character
+
+	KEY_LEFT  = 0x4B, // Move cursor left
+	KEY_RIGHT = 0x4D, // Move cursor right
+	KEY_UP    = 0x48, // Move cursor up
+	KEY_DOWN  = 0x50, // Move cursor down
 };
 
-static const uint8_t scancode_map[128] =
+static const char scancode_map[128] =
 {
 	//
 	// 10 elements per row
@@ -21,10 +29,13 @@ static const uint8_t scancode_map[128] =
 	't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', 0, 
 	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
 	'\'', '`', 0, '\\', 'z', 'x', 'c', 'v', 'b', 'n',
-	'm', '.', '/', 0, '*', 0, 0,
+	'm', '.', '/', 0, '*', 0, 0, 0, ' ', 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
-static uint8_t is_lock = false;
+static bool is_lock = false;
 
 void keyboard_interrupt_handler(uint32_t scancode)
 {
@@ -47,11 +58,11 @@ void keyboard_interrupt_handler(uint32_t scancode)
 	if (scancode_map[scancode])
 	{
 		uint8_t c = scancode_map[scancode];
-		if (is_lock && scancode_map[scancode] >= 'a'
-					&& scancode_map[scancode] <= 'z')
+		if (is_lock)
 		{
-			c -= 32;
+			c = toupper(c);
 		}
+
 		vga_putc(c);
 		return;
 	}
@@ -76,6 +87,20 @@ void keyboard_interrupt_handler(uint32_t scancode)
 		case KEY_CTRL:
 			vga_switch_color();
 			break;
+		
+		case KEY_LEFT:
+			vga_move_cursor(VGA_CURSOR_LEFT);
+			break;
+		case KEY_RIGHT:
+			vga_move_cursor(VGA_CURSOR_RIGHT);
+			break;
+		case KEY_UP:
+			vga_move_cursor(VGA_CURSOR_UP);
+			break;
+		case KEY_DOWN:
+			vga_move_cursor(VGA_CURSOR_DOWN);
+			break;
+		
 		default:
 			vga_putc('?');
 	}
