@@ -18,7 +18,7 @@ static uint16_t get_position(uint8_t row, uint8_t column)
 	return (row * VGA_WIDTH) + column;
 }
 
-uint16_t vga_cell(uint8_t character, uint8_t fg_color, uint8_t bg_color)
+static uint16_t get_cell(uint8_t character, uint8_t fg_color, uint8_t bg_color)
 {
 	return (uint16_t) character | ((uint16_t) get_color(fg_color, bg_color) << 8);
 }
@@ -56,31 +56,10 @@ void vga_put_cursor(uint8_t x, uint8_t y)
 	outb(VGA_CURSOR_PORT_DATA, position >> 8);           // Send the high byte of the position
 }
 
-void vga_put_cell(uint16_t cell, uint8_t x, uint8_t y)
+void vga_putc(uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t x, uint8_t y)
 {
 	volatile uint16_t* vga      = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
 	const    uint16_t  position = get_position(y, x);
 
-	vga[position] = cell;
-}
-
-void vga_clear(uint8_t fg_color, uint8_t bg_color)
-{
-	volatile uint16_t* vga = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
-	const    uint16_t  cell = vga_cell(' ', fg_color, bg_color);
-
-	for (uint32_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
-	{
-		vga[i] = cell;
-	}
-}
-
-void vga_fill(const uint16_t* screen_buffer)
-{
-	volatile uint16_t* vga = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
-
-	for (uint32_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
-	{
-		vga[i] = screen_buffer[i];
-	}
+	vga[position] = get_cell(c, fg_color, bg_color);
 }

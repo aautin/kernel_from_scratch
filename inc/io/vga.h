@@ -29,9 +29,5 @@ enum vga_color
 	VGA_COLOR_COUNT   = 16,
 };
 
-uint16_t vga_cell(uint8_t character, uint8_t fg_color, uint8_t bg_color);
-
 void vga_put_cursor(uint8_t x, uint8_t y);
-void vga_put_cell(uint16_t cell, uint8_t x, uint8_t y);
-void vga_clear(uint8_t fg_color, uint8_t bg_color);
-void vga_fill(const uint16_t* screen_buffer);
+void vga_putc(uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t x, uint8_t y);
