@@ -1,260 +1,86 @@
 #include <stdint.h>
 
-#include "io.h"
+#include "vga.h"
 
-#define VGA_WIDTH 80
-#define VGA_HEIGHT 25
-#define VGA_MEMORY_ADDRESS 0xB8000
-#define VGA_SCREEN_COUNT 4
-#define VGA_EXTRA_LINES VGA_HEIGHT
-
+#define VGA_MEMORY_ADDRESS      0xB8000
 #define VGA_CURSOR_PORT_COMMAND 0x3D4
 #define VGA_CURSOR_PORT_DATA    0x3D5
 #define VGA_CURSOR_PORT_HIGH    0x0F
 #define VGA_CURSOR_PORT_LOW     0x0E
 
-#define COLOR_SCHEME_COUNT (sizeof(color_schemes) / sizeof(color_schemes[0]))
-#define CELLS_PER_SCREEN (VGA_WIDTH * (VGA_HEIGHT + VGA_EXTRA_LINES))
-
-static const uint8_t color_schemes[][2] =
+static uint8_t get_color(uint8_t foreground, uint8_t background)
 {
-	{ 0x0F, 0x00 }, // White  on black
-	{ 0x0A, 0x00 }, // Green  on black
-	{ 0x0C, 0x00 }, // Red    on black
-	{ 0x0E, 0x00 }, // Yellow on black
-};
-
-static uint16_t screens[VGA_SCREEN_COUNT][CELLS_PER_SCREEN] = { {' ' | 0x0F00} };
-static int32_t  cursor          = 0;
-static uint8_t  current_screen  = 0;
-static uint8_t  color_index     = 0;
-static uint8_t  vertical_offset = 0;
-
-static uint8_t get_color()
-{
-	return color_schemes[color_index][0] | color_schemes[color_index][1] << 4;
+	return (background << 4) | (foreground & 0x0F);
 }
 
-static void move_cursor(uint32_t position)
+static uint16_t get_position(uint8_t row, uint8_t column)
 {
-	cursor = position;
-	uint16_t cursor_position = (uint16_t) position;
+	return (row * VGA_WIDTH) + column;
+}
+
+uint16_t vga_cell(uint8_t character, uint8_t fg_color, uint8_t bg_color)
+{
+	return (uint16_t) character | ((uint16_t) get_color(fg_color, bg_color) << 8);
+}
+
+void vga_set_cursor_visibility(bool visible)
+{
+	uint8_t cursor_start = inb(VGA_CURSOR_PORT_COMMAND + 0x0A);
+	uint8_t cursor_end   = inb(VGA_CURSOR_PORT_COMMAND + 0x0B);
+
+	//
+	// TODO
+	// Substitute the magic numbers with named constants.
+	//
+	if (visible)
+	{
+		cursor_start &= 0xC0; // Clear the cursor start bits
+		cursor_end   &= 0xE0; // Clear the cursor end bits
+	}
+	else
+	{
+		cursor_start |= 0x20; // Set the cursor start bit to hide the cursor
+	}
+
+	outb(VGA_CURSOR_PORT_COMMAND + 0x0A, cursor_start);
+	outb(VGA_CURSOR_PORT_COMMAND + 0x0B, cursor_end);
+}
+
+void vga_put_cursor(uint8_t x, uint8_t y)
+{
+	uint16_t position = get_position(y, x);
 
 	outb(VGA_CURSOR_PORT_COMMAND, VGA_CURSOR_PORT_HIGH);
-	outb(VGA_CURSOR_PORT_DATA, (uint8_t) (cursor_position & 0xFF));
+	outb(VGA_CURSOR_PORT_DATA, position & 0xFF);         // Send the low byte of the position
 	outb(VGA_CURSOR_PORT_COMMAND, VGA_CURSOR_PORT_LOW);
-	outb(VGA_CURSOR_PORT_DATA, (uint8_t) ((cursor_position >> 8) & 0xFF));
+	outb(VGA_CURSOR_PORT_DATA, position >> 8);           // Send the high byte of the position
 }
 
-static uint32_t screen_index(uint32_t index)
+void vga_put_cell(uint16_t cell, uint8_t x, uint8_t y)
 {
-	return index + (vertical_offset * VGA_WIDTH);
+	volatile uint16_t* vga      = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
+	const    uint16_t  position = get_position(y, x);
+
+	vga[position] = cell;
 }
 
-static inline bool can_scroll_down()
-{
-	return vertical_offset < VGA_EXTRA_LINES;
-}
-
-static inline bool can_scroll_up()
-{
-	return vertical_offset > 0;
-}
-
-static void scroll_down()
-{
-	vertical_offset++;
-	vga_put_screen();
-	move_cursor(cursor - VGA_WIDTH);
-}
-
-static void scroll_up()
-{
-	vertical_offset--;
-	vga_put_screen();
-	move_cursor(cursor + VGA_WIDTH);
-}
-
-void vga_clear_screen(void)
-{
-    for (uint32_t s = 0; s < VGA_SCREEN_COUNT; s++)
-    {
-        for (uint32_t i = 0; i < CELLS_PER_SCREEN; i++)
-            screens[s][i] = ' ' | 0x0F00;
-    }
-}
-
-void vga_move_cursor(enum direction direction)
-{
-	int32_t offset = 0;
-	switch (direction)
-	{
-		case VGA_CURSOR_LEFT:
-			offset = -1;
-			break;
-		case VGA_CURSOR_RIGHT:
-			offset = 1;
-			break;
-		case VGA_CURSOR_UP:
-			offset = -VGA_WIDTH;
-			break;
-		case VGA_CURSOR_DOWN:
-			offset = VGA_WIDTH;
-			break;
-	}
-
-	if (offset + cursor >= VGA_WIDTH * VGA_HEIGHT)
-	{
-		if (can_scroll_down())
-		{
-			scroll_down();
-		}
-		else
-		{
-			return;
-		}
-	}
-
-	if (offset + cursor < 0)
-	{
-		if (can_scroll_up())
-		{
-			scroll_up();
-		}
-		else
-		{
-			return;
-		}
-	}
-	
-	move_cursor(cursor + offset);
-}
-
-void vga_remove_last_character()
-{
-	if (cursor == 0 && can_scroll_up())
-	{
-		scroll_up();
-	}
-
-	if (cursor > 0)
-	{
-		screens[current_screen][screen_index(cursor) - 1] = ' ' | get_color() << 8;
-
-		volatile uint16_t* vga = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
-
-		vga[cursor - 1] = ' ' | get_color() << 8;
-		move_cursor(cursor - 1);
-	}
-}
-
-void vga_putc(uint16_t c)
+void vga_clear(uint8_t fg_color, uint8_t bg_color)
 {
 	volatile uint16_t* vga = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
-	uint8_t color = ((c & 0xFF00) >> 8) == 0 ? get_color() : (c & 0xFF00) >> 8;
+	const    uint16_t  cell = vga_cell(' ', fg_color, bg_color);
 
-	if (c == '\n')
+	for (uint32_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
 	{
-		if ((cursor / VGA_WIDTH) + 1 >= VGA_HEIGHT)
-		{
-			if (can_scroll_down())
-			{
-				scroll_down();
-			}
-			else
-			{
-				return;
-			}
-		}
-
-		uint32_t row = cursor / VGA_WIDTH;
-		uint32_t row_start = row * VGA_WIDTH;
-		uint32_t row_end = row_start + VGA_WIDTH;
-
-		for (uint16_t i = cursor; i < row_end; i++)
-		{
-			screens[current_screen][screen_index(i)] = ' ' | (color << 8);
-			vga[i] = ' ' | (color << 8);
-		}
-		move_cursor(cursor + (VGA_WIDTH - (cursor % VGA_WIDTH)));
-		return;
-	}
-
-	if (cursor + 1 >= VGA_WIDTH * VGA_HEIGHT)
-	{
-		if (can_scroll_down())
-		{
-			scroll_down();
-		}
-		else
-		{
-			return;
-		}
-	}
-
-	screens[current_screen][screen_index(cursor)] = (uint16_t) c | color << 8;
-	vga[cursor] = (uint16_t) c | color << 8;
-	move_cursor(cursor + 1);
-}
-
-void vga_putnbr(int32_t number)
-{
-	if (number == 0)
-	{
-		vga_putc('0');
-		return;
-	}
-
-	if (number < 0)
-	{
-		vga_putc('-');
-		number = -number;
-	}
-
-	int32_t reversed_number = 0;
-	int32_t digit_count = 0;
-
-	while (number > 0)
-	{
-		reversed_number = reversed_number * 10 + number % 10;
-		number /= 10;
-		digit_count++;
-	}
-
-	for (int32_t i = 0; i < digit_count; i++)
-	{
-		vga_putc((char) ('0' + reversed_number % 10));
-		reversed_number /= 10;
+		vga[i] = cell;
 	}
 }
 
-void vga_puts(const char* message)
-{
-	for (uint32_t index = 0; message[index]; index++)
-	{
-		vga_putc(message[index]);
-	}
-}
-
-void vga_put_screen()
+void vga_fill(const uint16_t* screen_buffer)
 {
 	volatile uint16_t* vga = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
 
-    for (uint32_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
-    {
-        vga[i] = screens[current_screen][screen_index(i)];
-    }
-}
-
-void vga_switch_next_screen()
-{
-	current_screen = (current_screen + 1) % VGA_SCREEN_COUNT;
-	vertical_offset = 0;
-	vga_put_screen();
-	move_cursor(0);
-}
-
-void vga_switch_color()
-{
-	color_index = (color_index + 1) % COLOR_SCHEME_COUNT;
+	for (uint32_t i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
+	{
+		vga[i] = screen_buffer[i];
+	}
 }
