@@ -6,11 +6,15 @@ SRC_DIR = src
 OBJ_DIR = obj
 BUILD_DIR = build
 
+SRCS_C = kernel.c lib.c tty.c keyboard.c io.c
+SRCS_S = boot.s
+OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS_C:.c=.o) $(SRCS_S:.s=.o))
+
 GCC = gcc
 CFLAGS = -m32 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -nostdlib -nodefaultlibs
 INCLUDE_DIRS = -Iinclude
 
-all : $(OBJ_DIR) $(BUILD_DIR) $(BUILD_DIR)/kfs kfs.iso
+all : $(OBJ_DIR) $(BUILD_DIR) $(BUILD_DIR)/kfs run
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -26,8 +30,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.s
 	nasm -f elf32 $< -o $@
 
 # Generation of the final kernel binary
-$(BUILD_DIR)/kfs: $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o $(OBJ_DIR)/lib.o $(OBJ_DIR)/tty.o 
-	ld -m elf_i386 -T linker.ld -o $@ $(OBJ_DIR)/boot.o $(OBJ_DIR)/kernel.o $(OBJ_DIR)/lib.o $(OBJ_DIR)/tty.o
+$(BUILD_DIR)/kfs: $(OBJS)
+	ld -m elf_i386 -T linker.ld -o $@ $(OBJS)
 
 kfs.iso: docker-build $(BUILD_DIR)/kfs
 	mkdir -p iso/boot/grub
