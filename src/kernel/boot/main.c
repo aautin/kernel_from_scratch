@@ -1,6 +1,6 @@
 #include "multiboot.h"
 #include "idt.h"
-#include "io.h"
+#include "terminal.h"
 #include "gdt.h"
 #include "pic.h"
 
@@ -28,10 +28,9 @@ void kernel_main(struct multiboot_info* mbi)
 	//
 	__asm__ volatile ("cli");
 
-	vga_clear_screen();
+	terminal_init();
+	terminal_puts("Kernel booted successfully\n");	
 
-	vga_puts("Kernel booted successfully\n");
-	
 	if (mbi->flags & MULTIBOOT_INFO_MEMORY)
 	{
 		uint32_t lower_memory = mbi->mem_lower;

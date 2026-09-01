@@ -30,4 +30,4 @@ enum vga_color
 };
 
 void vga_put_cursor(uint8_t x, uint8_t y);
-void vga_putc(uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t x, uint8_t y);
+void vga_set_cell(uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t x, uint8_t y);

@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "io.h"
+#include "terminal.h"
 #include "char.h"
 
 #define KEY_RELEASED_MASK 0x80
@@ -44,64 +44,66 @@ void keyboard_interrupt_handler(uint32_t scancode)
 		return;
 	}
 
-	//
-	// The scancode is out of bounds
-	//
 	if (scancode >= sizeof(scancode_map))
 	{
+		//
+		// The scancode is out of bounds
+		//
 		return;
 	}
 
-	//
-	// The character is printable
-	//
 	if (scancode_map[scancode])
 	{
+		//
+		// The character is printable
+		//
+
 		uint8_t c = scancode_map[scancode];
 		if (is_lock)
 		{
 			c = toupper(c);
 		}
 
-		vga_putc(c);
+		terminal_putc(c);
 		return;
 	}
 
-	//
-	// Special keys handling
-	//
 	switch (scancode)
 	{
+		//
+		// Special keys handling
+		//
+
 		case KEY_SPACE:
-			vga_putc(' ');
+			terminal_putc(' ');
 			break;
 		case KEY_CAPS:
 			is_lock ^= 1;
 			break;
 		case KEY_BACKSPACE:
-			vga_remove_last_character();
+			terminal_del(1);
 			break;
 		case KEY_TAB:
-			vga_switch_next_screen();
+			terminal_switch_screen();
 			break;
 		case KEY_CTRL:
-			vga_switch_color();
+			terminal_switch_color_scheme();
 			break;
 		
 		case KEY_LEFT:
-			vga_move_cursor(VGA_CURSOR_LEFT);
+			terminal_move(TERMINAL_CURSOR_LEFT);
 			break;
 		case KEY_RIGHT:
-			vga_move_cursor(VGA_CURSOR_RIGHT);
+			terminal_move(TERMINAL_CURSOR_RIGHT);
 			break;
 		case KEY_UP:
-			vga_move_cursor(VGA_CURSOR_UP);
+			terminal_move(TERMINAL_CURSOR_UP);
 			break;
 		case KEY_DOWN:
-			vga_move_cursor(VGA_CURSOR_DOWN);
+			terminal_move(TERMINAL_CURSOR_DOWN);
 			break;
 		
 		default:
-			vga_putc('?');
+			terminal_putc('?');
 	}
 }

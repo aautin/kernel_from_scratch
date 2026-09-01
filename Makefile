@@ -9,7 +9,7 @@ CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-builtin -nostdlib -m32 -g
 ASFLAGS       := -f elf32
 LDFLAGS       := -m elf_i386 
 
-INC_PATH := inc inc/helper
+INC_PATH := inc inc/helper inc/io
 SRC_PATH := src
 OBJ_PATH := obj
 
@@ -25,6 +25,8 @@ C_SRC_FILES  := kernel/boot/main \
 				\
 				kernel/io/vga \
 				kernel/io/port \
+				\
+				kernel/terminal \
 				\
 				kernel/helper/char \
 				kernel/helper/string

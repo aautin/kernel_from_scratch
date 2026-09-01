@@ -2,12 +2,21 @@
 
 #include <stdint.h>
 
-void switch_color_scheme();
-void switch_screen();
+enum terminal_cursor_direction
+{
+	TERMINAL_CURSOR_UP,
+	TERMINAL_CURSOR_DOWN,
+	TERMINAL_CURSOR_LEFT,
+	TERMINAL_CURSOR_RIGHT,
+};
 
-void put_screen();
+void terminal_init();
+void terminal_move(enum terminal_cursor_direction direction);
 
-void putc(char c);
-void putnbr(int32_t number);
-void puts(const char* message);
-void del(uint32_t count);
+void terminal_switch_color_scheme();
+void terminal_switch_screen();
+
+void terminal_putc(char c);
+void terminal_putnbr(int32_t number);
+void terminal_puts(const char* message);
+void terminal_del(uint32_t count);

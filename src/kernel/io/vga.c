@@ -1,6 +1,7 @@
 #include <stdint.h>
 
 #include "vga.h"
+#include "port.h"
 
 #define VGA_MEMORY_ADDRESS      0xB8000
 #define VGA_CURSOR_PORT_COMMAND 0x3D4
@@ -23,7 +24,7 @@ static uint16_t get_cell(uint8_t character, uint8_t fg_color, uint8_t bg_color)
 	return (uint16_t) character | ((uint16_t) get_color(fg_color, bg_color) << 8);
 }
 
-void vga_set_cursor_visibility(bool visible)
+void vga_set_cellursor_visibility(bool visible)
 {
 	uint8_t cursor_start = inb(VGA_CURSOR_PORT_COMMAND + 0x0A);
 	uint8_t cursor_end   = inb(VGA_CURSOR_PORT_COMMAND + 0x0B);
@@ -56,7 +57,7 @@ void vga_put_cursor(uint8_t x, uint8_t y)
 	outb(VGA_CURSOR_PORT_DATA, position >> 8);           // Send the high byte of the position
 }
 
-void vga_putc(uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t x, uint8_t y)
+void vga_set_cell(uint8_t c, uint8_t fg_color, uint8_t bg_color, uint8_t x, uint8_t y)
 {
 	volatile uint16_t* vga      = (volatile uint16_t*) VGA_MEMORY_ADDRESS;
 	const    uint16_t  position = get_position(y, x);
