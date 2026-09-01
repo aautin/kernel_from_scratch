@@ -3,9 +3,20 @@
 #include "terminal.h"
 #include "gdt.h"
 #include "pic.h"
+#include "printk.h"
 
 extern uint32_t irq1_stub();
 extern void     register_gdt();
+
+struct multiboot_mmap_entry
+{
+	uint32_t size;
+	uint32_t base_addr_low;
+	uint32_t base_addr_high;
+	uint32_t length_low;
+	uint32_t length_high;
+	uint32_t type;
+};
 
 static void hang()
 {
@@ -29,32 +40,23 @@ void kernel_main(struct multiboot_info* mbi)
 	__asm__ volatile ("cli");
 
 	terminal_init();
-	terminal_puts("Kernel booted successfully\n");	
-
+	
 	if (mbi->flags & MULTIBOOT_INFO_MEMORY)
 	{
-		uint32_t lower_memory = mbi->mem_lower;
-		uint32_t upper_memory = mbi->mem_upper;
-		
-		(void) lower_memory;
-		(void) upper_memory;
-		//
-		// TODO
-		// Output the lower and upper memory information to the debug console
-		//
+		printk("Lower memory: %d KB\n", mbi->mem_lower);
+		printk("Upper memory: %d KB\n", mbi->mem_upper);
 	}
 
 	if (mbi->flags & MULTIBOOT_INFO_MEM_MAP)
 	{
-		uint32_t mmap_length = mbi->mmap_length;
-		uint32_t mmap_addr   = mbi->mmap_addr;
-
-		(void) mmap_length;
-		(void) mmap_addr;
-		//
-		// TODO
-		// Output the memory map information to the debug console
-		//
+		printk("Memory map length: %d bytes\n", mbi->mmap_length);
+		printk("Memory map address: 0x%x\n", mbi->mmap_addr);
+		for (uint32_t i = 0; i < mbi->mmap_length; )
+		{
+			struct multiboot_mmap_entry* entry = (struct multiboot_mmap_entry*) (mbi->mmap_addr + i);
+			printk("Memory map entry: base_addr=0x%x, length=0x%x, type=%d\n", entry->base_addr_low, entry->length_low, entry->type);
+			i += entry->size + sizeof(entry->size);
+		}
 	}
 
 	set_gdt();
