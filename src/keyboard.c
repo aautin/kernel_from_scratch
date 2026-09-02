@@ -19,6 +19,17 @@ static const char scancode_to_ascii[128] = {
     0, 0, 0, 0, 0, 0,
 };
 
+static const char scancode_shift_to_ascii[128] = {
+    0, 27, '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '_', '+', '\b',
+    '\t', 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',
+    0, 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':', '"', '~',
+    0, '|', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '<', '>', '?', 0,
+    '*',
+    0,
+    0,
+    0, 0, 0, 0, 0, 0,
+};
+
 
 /**
  * Polls the PS/2 controller until a scancode is available, then reads it.
@@ -35,21 +46,32 @@ uint8_t ps2_read_scancode(void)
 
 void keyboard_event_loop(void)
 {
+    static bool shift_pressed = false;
+    char ascii = 0;
     while (true)
     {
         uint8_t scancode = ps2_read_scancode();
         
         if ((scancode & 0x80) == 0) // key pressed 
         {
-            char ascii = scancode_to_ascii[scancode];
-            if (ascii)
+            if (scancode == 0x2A || scancode == 0x36) // Shift key pressed
             {
-                terminal_putchar(ascii);
+                shift_pressed = true;
+            }
+            else
+            {
+                ascii = shift_pressed ? scancode_shift_to_ascii[scancode] : scancode_to_ascii[scancode];
+                if (ascii)
+                    terminal_putchar(ascii);
             }
         }
         else // key released
         {
-            // Handle key release
+            uint8_t released_key = scancode & 0x7F;
+            {
+                shift_pressed = false;
+            }
+
         }
 
     }

@@ -1,5 +1,4 @@
 #environnement for building the OS
-#replace grub-pc-bin by grub2-pc-bin for fedora
 
 FROM debian:13
 
