@@ -3,6 +3,7 @@
 #include "io.h"
 #include "tty.h"
 #include "keyboard.h"
+#include "printk.h"
 
 #define PS2_DATA_PORT    0x60
 #define PS2_STATUS_PORT  0x64
@@ -48,9 +49,13 @@ void keyboard_event_loop(void)
 {
     static bool shift_pressed = false;
     char ascii = 0;
+    char test[] = "test";
+    int n = 42;
+    printk("testing keyboard %s %d\n", test, n);
     while (true)
     {
         uint8_t scancode = ps2_read_scancode();
+
         
         if ((scancode & 0x80) == 0) // key pressed 
         {
