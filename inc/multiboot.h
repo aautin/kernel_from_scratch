@@ -60,3 +60,23 @@ struct multiboot_info
 //-------------------------------------------//
 };
 typedef struct multiboot_info multiboot_info_t;
+
+enum multiboot_mem_map_type
+{
+	MULTIBOOT_MEM_MAP_AVAILABLE = 1,
+	MULTIBOOT_MEM_MAP_RESERVED  = 2,
+	MULTIBOOT_MEM_MAP_ACPI_RECLAIMABLE = 3,
+	MULTIBOOT_MEM_MAP_NVS = 4,
+	MULTIBOOT_MEM_MAP_BADRAM = 5,
+};
+
+struct multiboot_mmap_entry
+{
+    uint32_t size;
+    uint64_t base_addr;
+    uint64_t length;
+    enum multiboot_mem_map_type type;
+};
+typedef struct multiboot_mmap_entry multiboot_mmap_entry_t;
+
+void print_multiboot_info(struct multiboot_info* mbi);

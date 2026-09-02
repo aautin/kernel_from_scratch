@@ -3,4 +3,4 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-uint32_t printk(const char* s, ...);
+uint64_t printk(const char* s, ...);

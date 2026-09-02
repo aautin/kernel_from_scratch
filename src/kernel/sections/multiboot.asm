@@ -1,4 +1,4 @@
-; boot.asm
+; multiboot.asm
 
 [bits 32]
 

@@ -67,6 +67,3 @@ struct gdt_ptr
 typedef struct gdt_ptr gdt_ptr_t;
 
 void register_gdt();
-void set_gdt();
-void set_gdt_entry(selector_i index, uint32_t base, uint32_t limit,
-			uint8_t access, uint8_t granularity);

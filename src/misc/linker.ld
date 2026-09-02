@@ -1,7 +1,13 @@
-ENTRY(kernel_start)
+ENTRY(kernel_entry)
 
 SECTIONS
 {
+	. = 0x800;
+	.gdt :
+	{
+		KEEP(*(.gdt))
+	}
+
 	. = 1M;
 	.multiboot :
 	{

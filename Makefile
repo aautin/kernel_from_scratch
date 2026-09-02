@@ -16,6 +16,7 @@ OBJ_PATH := obj
 LD_SCRIPT := $(SRC_PATH)/misc/linker.ld
 
 C_SRC_FILES  := kernel/boot/main \
+				kernel/boot/multiboot \
 				\
 				kernel/gdt \
 				\
@@ -34,7 +35,11 @@ C_SRC_FILES  := kernel/boot/main \
 
 C_SRC        := $(addsuffix .c, $(addprefix $(SRC_PATH)/, $(C_SRC_FILES)))
 
-AS_SRC_FILES := kernel/boot/multiboot \
+AS_SRC_FILES := kernel/boot/entry \
+				\
+				kernel/sections/multiboot \
+				kernel/sections/gdt \
+				\
 				kernel/interrupt/handler/irq_stub
 
 AS_SRC       := $(addsuffix .asm, $(addprefix $(SRC_PATH)/, $(AS_SRC_FILES)))
@@ -57,14 +62,17 @@ DOCKERFILE   := $(SRC_PATH)/misc/Dockerfile
 DOCKER_IMAGE := kfs-builder
 DOCKER_CMD   := grub-mkrescue -o $(ISO_FILE) $(ISO_PATH)
 
-.PHONY: all clean fclean re run docker
+.PHONY: all clean fclean re run print_src print_obj
 
 all: $(ISO)
 
-print:
+print_src:
 	@echo "C source files: $(C_SRC)"
 	@echo "Assembly source files: $(AS_SRC)"
-	@echo "Object files: $(C_OBJS) $(AS_OBJS)"
+
+print_obj:
+	@echo "C object files: $(C_OBJS)"
+	@echo "Assembly object files: $(AS_OBJS)"
 
 $(NAME): $(C_OBJS) $(AS_OBJS)
 	$(LD) $(LDFLAGS) -T $(LD_SCRIPT) -o $(NAME) $(C_OBJS) $(AS_OBJS)
@@ -89,8 +97,6 @@ $(ISO): $(ISO_SRC)
 
 run: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)
-
-docker:
 
 clean:
 	rm -rf $(OBJ_PATH)

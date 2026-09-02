@@ -3,19 +3,19 @@
 #include "terminal.h"
 #include "string.h"
 
-uint32_t putchar(char c)
+static uint64_t putchar(char c)
 {
 	terminal_putc(c);
 	return 1;
 }
 
-uint32_t putstr(const char* s)
+static uint64_t putstr(const char* s)
 {
 	terminal_puts(s);
 	return strlen(s);
 }
 
-uint32_t putnbr(int32_t number)
+static uint32_t putnbr(int32_t number)
 {
 	uint32_t count = 0;
 
@@ -29,79 +29,98 @@ uint32_t putnbr(int32_t number)
 	{
 		terminal_putc('-');
 		count++;
-		number = -number;
+		uint32_t absolute_number = (uint32_t) (-(number + 1)) + 1;
+		char digits[20];
+		int index = 0;
+
+		while (absolute_number > 0)
+		{
+			digits[index++] = (char) ('0' + (absolute_number % 10));
+			absolute_number /= 10;
+		}
+
+		for (int i = index - 1; i >= 0; i--)
+		{
+			terminal_putc(digits[i]);
+			count++;
+		}
+
+		return count;
 	}
 
-	int32_t reversed_number = 0;
-	int32_t digit_count = 0;
-
-	while (number > 0)
-	{
-		reversed_number = reversed_number * 10 + number % 10;
-		number /= 10;
-		digit_count++;
-	}
-
-	for (int32_t i = 0; i < digit_count; i++)
-	{
-		terminal_putc((char) ('0' + reversed_number % 10));
-		reversed_number /= 10;
-		count++;
-	}
-
-	return count;
-}
-
-uint32_t puthex(uint32_t number)
-{
-	uint32_t count = 0;
-	if (number == 0)
-	{
-		terminal_putc('0');
-		return count + 1;
-	}
-
-	char hex_digits[8];
+	uint32_t absolute_number = (uint32_t) number;
+	char digits[20];
 	int index = 0;
 
-	while (number > 0)
+	while (absolute_number > 0)
 	{
-		uint32_t digit = number % 16;
-		if (digit < 10)
-			hex_digits[index++] = '0' + digit;
-		else
-			hex_digits[index++] = 'a' + (digit - 10);
-		number /= 16;
+		digits[index++] = (char) ('0' + (absolute_number % 10));
+		absolute_number /= 10;
 	}
 
 	for (int i = index - 1; i >= 0; i--)
 	{
-		terminal_putc(hex_digits[i]);
+		terminal_putc(digits[i]);
 		count++;
 	}
 
 	return count;
 }
 
-uint32_t putptr(void* ptr)
+static uint64_t puthex(uint64_t number)
+{
+    uint64_t count = 0;
+    const char *digits = "0123456789abcdef";
+
+    if (number == 0)
+    {
+        terminal_putc('0');
+        return 1;
+    }
+
+    char hex_digits[16];
+    int index = 0;
+
+    while (number)
+    {
+        hex_digits[index++] = digits[number & 0xf];
+        number >>= 4;
+    }
+
+    while (index--)
+    {
+        terminal_putc(hex_digits[index]);
+        count++;
+    }
+
+    return count;
+}
+
+static uint32_t putptr(void* ptr)
 {
 	uint32_t address = (uint32_t) ptr;
 	return putstr("0x") + puthex(address);
 }
 
-uint32_t printk(const char *s, ...)
+uint64_t printk(const char *s, ...)
 {
-	va_list	 args;
-	uint32_t count;
+	va_list args;
+	uint64_t count;
 
 	va_start(args, s);
-	
+
 	count = 0;
-	for (uint32_t i = 0; s[i]; i++)
+	for (uint64_t i = 0; s[i]; i++)
 	{
 		if (s[i] == '%')
 		{
+			int has_long_long = 0;
 			i++;
+			if (s[i] == 'l' && s[i + 1] == 'l')
+			{
+				has_long_long = 1;
+				i += 2;
+			}
 			switch (s[i])
 			{
 				case 'c':
@@ -118,13 +137,17 @@ uint32_t printk(const char *s, ...)
 					count += putchar('%');
 					break;
 				case 'x':
-					count += puthex(va_arg(args, unsigned int));
+					if (has_long_long)
+						count += puthex(va_arg(args, uint64_t));
+					else
+						count += puthex(va_arg(args, unsigned int));
 					break;
 				case 'p':
 					count += putptr(va_arg(args, void *));
 					break;
 				default:
 					count += putchar(s[i]);
+					break;
 			}
 		}
 		else
