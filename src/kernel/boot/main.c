@@ -1,9 +1,8 @@
 #include "multiboot.h"
 #include "idt.h"
-#include "terminal.h"
 #include "gdt.h"
 #include "pic.h"
-#include "printk.h"
+#include "shell.h"
 
 extern uint32_t irq1_stub();
 extern void     register_gdt();
@@ -22,11 +21,9 @@ static void hang()
 	}
 }
 
-void kernel_main(struct multiboot_info* mbi)
+void kernel_main(multiboot_info_t* mbi)
 {
-	terminal_init();
-	
-	print_multiboot_info(mbi);
+	shell_init(mbi);
 
 	register_gdt();
 	remap_pic();

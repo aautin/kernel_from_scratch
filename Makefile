@@ -28,9 +28,11 @@ C_SRC_FILES  := kernel/boot/main \
 				kernel/io/port \
 				\
 				kernel/terminal \
+				kernel/shell \
 				\
 				kernel/helper/char \
 				kernel/helper/printk \
+				kernel/helper/mem \
 				kernel/helper/string
 
 C_SRC        := $(addsuffix .c, $(addprefix $(SRC_PATH)/, $(C_SRC_FILES)))

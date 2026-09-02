@@ -39,11 +39,11 @@ enum gdt_access_byte
 	
 	EXECUTABLE   = 0x08,
 
-	DIRECTION    = 0x04, // Data segments: 0=expand-up, 1=expand-down.
-						 // Code segments: 0=conforming, 1=non-conforming.
+	DIRECTION    = 0x04, // Executable     : 0=expand-up,  1=expand-down.
+						 // Non-executable : 0=conforming, 1=non-conforming.
 	
-	READ_WRITE   = 0x02, // Data segments: 0=read-only, 1=read/write.
-						 // Code segments: 0=execute-only, 1=execute/read.
+	READ_WRITE   = 0x02, // Executable     : 0=execute-only, 1=readable.
+						 // Non-executable : 0=read-only,    1=read/write.
 
 	ACCESSED     = 0x01,
 };

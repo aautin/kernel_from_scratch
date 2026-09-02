@@ -2,16 +2,18 @@
 
 #include "terminal.h"
 #include "char.h"
+#include "shell.h"
 
 #define KEY_RELEASED_MASK 0x80
 
 enum keyboard_special_scancode
 {
-	KEY_CAPS        = 0x3A, // Toggle caps lock state
-	KEY_TAB         = 0x0F, // Switch screen
-	KEY_CTRL        = 0x1D, // Switch color scheme
-	KEY_BACKSPACE   = 0x0E, // Delete last character
-	KEY_SPACE       = 0x39, // Put a space character
+	KEY_CAPS      = 0x3A, // Toggle caps lock state
+	KEY_TAB       = 0x0F, // Switch screen
+	KEY_CTRL      = 0x1D, // Switch color scheme
+	KEY_BACKSPACE = 0x0E, // Delete last character
+	KEY_SPACE     = 0x39, // Put a space character
+	KEY_ENTER     = 0x1C, // Execute a command
 
 	KEY_LEFT  = 0x4B, // Move cursor left
 	KEY_RIGHT = 0x4D, // Move cursor right
@@ -26,7 +28,7 @@ static const char scancode_map[128] =
 	//
 	0, 27, '1', '2', '3', '4', '5', '6', '7', '8',
 	'9', '0', '-', '=', 0, 0, 'q', 'w', 'e', 'r',
-	't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', 0, 
+	't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0, 0, 
 	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
 	'\'', '`', 0, '\\', 'z', 'x', 'c', 'v', 'b', 'n',
 	'm', '.', '/', 0, '*', 0, 0, 0, ' ', 0,
@@ -36,6 +38,15 @@ static const char scancode_map[128] =
 };
 
 static bool is_lock = false;
+
+static void execute()
+{
+	char buffer[256];
+	if (terminal_last_word(buffer, sizeof(buffer)))
+	{
+		shell_execute(buffer);
+	}
+}
 
 void keyboard_interrupt_handler(uint32_t scancode)
 {
@@ -73,7 +84,9 @@ void keyboard_interrupt_handler(uint32_t scancode)
 		//
 		// Special keys handling
 		//
-
+		case KEY_ENTER:
+			execute();
+			break;
 		case KEY_SPACE:
 			terminal_putc(' ');
 			break;

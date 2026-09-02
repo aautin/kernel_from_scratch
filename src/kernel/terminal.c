@@ -84,6 +84,60 @@ static void scroll_up()
 	vga_put_cursor(state.cursor_x, cursor_y_to_vga());
 }	
 
+void terminal_init()
+{
+	state.terminal_index = 0;
+
+	state.cursor_x = 0;
+	state.cursor_y = 0;
+
+	state.scroll_y = 0;
+
+	state.color_index = 0;
+
+	state.colors[0] = VGA_WHITE;
+	state.colors[1] = VGA_BLUE;
+	state.colors[2] = VGA_RED;
+
+	for (uint32_t i = 0; i < TERMINAL_SCREEN_COUNT; i++)
+	{
+		for (uint32_t x = 0; x < TERMINAL_WIDTH; x++)
+		{
+			for (uint32_t y = 0; y < TERMINAL_HEIGHT; y++)
+			{
+				screen_cell_t* cell = &terminals[i][y][x];
+				cell->fg_color = state.colors[state.color_index];
+				cell->bg_color = VGA_BLACK;
+				cell->character = ' ';
+			}
+		}
+	}
+
+	put_terminal();
+	vga_put_cursor(state.cursor_x, cursor_y_to_vga());
+}
+
+void terminal_clear()
+{
+	for (uint32_t x = 0; x < TERMINAL_WIDTH; x++)
+	{
+		for (uint32_t y = 0; y < TERMINAL_HEIGHT; y++)
+		{
+			screen_cell_t* cell = &terminals[state.terminal_index][y][x];
+			cell->fg_color = state.colors[state.color_index];
+			cell->bg_color = VGA_BLACK;
+			cell->character = ' ';
+		}
+	}
+
+	state.cursor_x = 0;
+	state.cursor_y = 0;
+	state.scroll_y = 0;
+
+	put_terminal();
+	vga_put_cursor(state.cursor_x, cursor_y_to_vga());
+}
+
 void terminal_move(enum terminal_cursor_direction direction)
 {
 	switch (direction)
@@ -122,39 +176,6 @@ void terminal_move(enum terminal_cursor_direction direction)
 			break;
 	}
 		
-	vga_put_cursor(state.cursor_x, cursor_y_to_vga());
-}
-
-void terminal_init()
-{
-	state.terminal_index = 0;
-
-	state.cursor_x = 0;
-	state.cursor_y = 0;
-
-	state.scroll_y = 0;
-
-	state.color_index = 0;
-
-	state.colors[0] = VGA_WHITE;
-	state.colors[1] = VGA_BLUE;
-	state.colors[2] = VGA_RED;
-
-	for (uint32_t i = 0; i < TERMINAL_SCREEN_COUNT; i++)
-	{
-		for (uint32_t x = 0; x < TERMINAL_WIDTH; x++)
-		{
-			for (uint32_t y = 0; y < TERMINAL_HEIGHT; y++)
-			{
-				screen_cell_t* cell = &terminals[i][y][x];
-				cell->fg_color = state.colors[state.color_index];
-				cell->bg_color = VGA_BLACK;
-				cell->character = ' ';
-			}
-		}
-	}
-
-	put_terminal();
 	vga_put_cursor(state.cursor_x, cursor_y_to_vga());
 }
 
@@ -324,4 +345,54 @@ void terminal_del(uint32_t count)
 		vga_set_cell(' ', cell->fg_color, cell->bg_color, state.cursor_x, state.cursor_y - state.scroll_y);
 		vga_put_cursor(state.cursor_x, cursor_y_to_vga());
 	}
+}
+
+bool terminal_last_word(char buffer[], uint32_t buffer_size)
+{
+	if (buffer_size == 0)
+	{
+		return false;
+	}
+
+	uint32_t index = 0;
+	int32_t cursor_x = state.cursor_x;
+	int32_t cursor_y = state.cursor_y;
+
+	while (index < buffer_size - 1)
+	{
+		if (cursor_x == 0 && cursor_y == 0)
+		{
+			break;
+		}
+
+		if (cursor_x == 0)
+		{
+			cursor_x = TERMINAL_WIDTH - 1;
+			cursor_y--;
+		}
+		else
+		{
+			cursor_x--;
+		}
+
+		const screen_cell_t* cell = &terminals[state.terminal_index][cursor_y][cursor_x];
+		
+		if (cell->character == ' ')
+		{
+			break;
+		}
+
+		buffer[index++] = cell->character;
+	}
+
+	buffer[index] = '\0';
+
+	for (uint32_t i = 0; i < index / 2; i++)
+	{
+		char temp = buffer[i];
+		buffer[i] = buffer[index - i - 1];
+		buffer[index - i - 1] = temp;
+	}
+
+	return index > 0;
 }
