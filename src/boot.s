@@ -6,6 +6,26 @@ section .multiboot
     dd 0x3 ; FLAGS
     dd -(0x1BADB002 + 0x3) ; CHECKSUM
 
+section .gdt
+    global gdt_start
+    global gdt_end
+    global gdt_flush
+
+    gdt_start:
+        resq 6
+    gdt_end:
+
+    gdt_flush:
+        jmp 0x08:.reload_cs
+    .reload_cs:
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+    ret
+
 section .bss ; provides a stack size and define the stack_top
     align 16
     stack_bottom:
@@ -16,6 +36,7 @@ section .bss ; provides a stack size and define the stack_top
 section .text
     global _start
     extern kernel_main
+
     _start:
         mov esp, stack_top
         call kernel_main

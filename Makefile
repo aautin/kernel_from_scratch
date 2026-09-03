@@ -6,7 +6,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 BUILD_DIR = build
 
-SRCS_C = kernel.c lib.c tty.c keyboard.c io.c printk.c
+SRCS_C = kernel.c lib.c tty.c keyboard.c io.c printk.c gdt.c
 SRCS_S = boot.s
 OBJS = $(addprefix $(OBJ_DIR)/, $(SRCS_C:.c=.o) $(SRCS_S:.s=.o))
 

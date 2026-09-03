@@ -4,6 +4,12 @@ ENTRY(_start)
    kernel image. */
 SECTIONS
 {
+	. = 0x800;
+	.gdt :
+	{
+		KEEP(*(.gdt))
+	}
+
 	. = 2M;
 
 	.text BLOCK(4K) : ALIGN(4K)

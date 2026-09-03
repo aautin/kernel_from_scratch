@@ -4,10 +4,12 @@
 
 #include "tty.h"
 #include "keyboard.h"
+#include "gdt.h"
 
 void kernel_main(void)
 {
     //Initialize the kernel
+    register_gdt();
     terminal_initialize();
     terminal_writestring("42\n");
     keyboard_event_loop();
