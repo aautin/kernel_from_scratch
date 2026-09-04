@@ -4,21 +4,25 @@
 
 enum gdt_selector_index
 {
-	NULL_I        = 0,
-	KERNEL_CODE_I = 1,
-	KERNEL_DATA_I = 2,
-	USER_CODE_I   = 3,
-	USER_DATA_I   = 4,
+	NULL_I,
+	KERNEL_CODE_I,
+	KERNEL_DATA_I,
+	KERNEL_STACK_I,
+	USER_CODE_I,
+	USER_DATA_I,
+	USER_STACK_I,
 };
 typedef enum gdt_selector_index selector_i;
 
 enum gdt_selector_offset
-{
-	NULL_OFFSET        = 0x00,
-	KERNEL_CODE_OFFSET = 0x08,
-	KERNEL_DATA_OFFSET = 0x10,
-	USER_CODE_OFFSET   = 0x18,
-	USER_DATA_OFFSET   = 0x20,
+{ 
+	NULL_OFFSET         = 0x00,
+	KERNEL_CODE_OFFSET  = 0x08,
+	KERNEL_DATA_OFFSET  = 0x10,
+	KERNEL_STACK_OFFSET = 0x18,
+	USER_CODE_OFFSET    = 0x20,
+	USER_DATA_OFFSET    = 0x28,
+	USER_STACK_OFFSET   = 0x30,
 };
 typedef enum gdt_selector_offset selector_offset;
 
@@ -30,22 +34,19 @@ enum gdt_segment_range
 
 enum gdt_access_byte
 {
-	PRESENT      = 0x80,
+	PRESENT  = 0x80, // Always set to 1 (meaning the segment is valid).
+	ACCESSED = 0x01, // Always set to 0, the CPU sets to 1 when accessing it.
 	
-	PRIVILEGE_0  = 0x00,
-	PRIVILEGE_3  = 0x60,
-
-	DESCRIPTOR  = 0x10, // 0=system, 1=code or data segment
+	PRIVILEGE_0 = 0x00,
+	PRIVILEGE_3 = 0x60,
 	
-	EXECUTABLE   = 0x08,
-
-	DIRECTION    = 0x04, // Executable     : 0=expand-up,  1=expand-down.
-						 // Non-executable : 0=conforming, 1=non-conforming.
+	DESCRIPTOR = 0x10, // 0=system (e.g., TSS, LDT), 1=code or data segment.
 	
-	READ_WRITE   = 0x02, // Executable     : 0=execute-only, 1=readable.
-						 // Non-executable : 0=read-only,    1=read/write.
-
-	ACCESSED     = 0x01,
+	EXECUTABLE = 0x08,
+	DIRECTION  = 0x04, // Executable     : 0=expand-up,  1=expand-down.
+					   // Non-executable : 0=conforming, 1=non-conforming.
+	READ_WRITE = 0x02, // Executable     : 0=execute-only, 1=readable.
+					   // Non-executable : 0=read-only,    1=read/write.
 };
 
 struct gdt_entry

@@ -8,7 +8,7 @@ section .gdt
 	global gdt_end
 
 	gdt_start:
-		; Reserve 5 quadwords.
-		; 5 descriptors: null, kernel code, kernel data, user code, user data
-		resq 5      
+		; Reserve 7 quadwords.
+		; For 7 descriptors: null, kernel code-data-stack, user code-data-stack
+		resq 7
 	gdt_end:

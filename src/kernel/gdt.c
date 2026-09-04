@@ -51,6 +51,14 @@ void register_gdt()
 	);
 
 	//
+	// Kernel stack segment
+	//
+	set_entry(KERNEL_STACK_I,
+		ADDRESS_MIN, ADDRESS_MAX,
+		DESCRIPTOR | PRESENT | PRIVILEGE_0 | READ_WRITE, 0xCF
+	);
+
+	//
 	// User code segment
 	//
 	set_entry(USER_CODE_I,
@@ -66,19 +74,54 @@ void register_gdt()
 		DESCRIPTOR | PRESENT | PRIVILEGE_3 | READ_WRITE, 0xCF
 	);
 
-    __asm__ volatile ("lgdt %0" : : "m"(gdt_ptr));
-    __asm__ volatile (
-		"ljmp $0x08, $reload_segments\n"
+	//
+	// User stack segment
+	//
+	set_entry(USER_STACK_I,
+		ADDRESS_MIN, ADDRESS_MAX,
+		DESCRIPTOR | PRESENT | PRIVILEGE_3 | READ_WRITE, 0xCF
+	);
+
+	//
+	// Load the GDT register with the address of the GDT pointer
+	//
+	__asm__ volatile ("lgdt %0" : : "m"(gdt_ptr));
+
+	//
+	// Reload the segment registers with the new GDT values:
+	// CS uses the KERNEL_CODE segment selector
+	// DS, ES, FS and GS use the KERNEL_DATA segment selector
+	// SS uses the KERNEL_STACK segment selector
+	//
+	__asm__ volatile (
+		"ljmp %0, $reload_segments\n"
 		"reload_segments:\n"
-		"mov $0x10, %%ax\n"
+
+		"mov %1, %%ax\n"
 		"mov %%ax, %%ds\n"
 		"mov %%ax, %%es\n"
 		"mov %%ax, %%fs\n"
 		"mov %%ax, %%gs\n"
+
+		"mov %2, %%ax\n"
 		"mov %%ax, %%ss\n"
+
+		//
+		// Output operands 
+		//
 		:
-		:
+		//
+		// Input operands. Tells GCC what values to substitute into the asm code.
+		//
+		: "i"(KERNEL_CODE_OFFSET),
+		  "i"(KERNEL_DATA_OFFSET),
+		  "i"(KERNEL_STACK_OFFSET)
+		//
+		// Clobber list. Tells GCC what this asm modifies/affects.
+		//
+		// EAX is used to load the segment registers
+		// and memory is affected by the segment register changes.
+		//
 		: "eax", "memory"
 	);
 }
-
