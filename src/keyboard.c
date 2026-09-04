@@ -45,18 +45,16 @@ uint8_t ps2_read_scancode(void)
 
 
 
-void keyboard_event_loop(void)
+char keyboard_getchar(void)
 {
+    char ascii;
     static bool shift_pressed = false;
-    char ascii = 0;
-    char test[] = "test";
-    int n = 42;
-    printk("testing keyboard %s %d\n", test, n);
+
     while (true)
     {
+        char ascii;
         uint8_t scancode = ps2_read_scancode();
-
-        
+    
         if ((scancode & 0x80) == 0) // key pressed 
         {
             if (scancode == 0x2A || scancode == 0x36) // Shift key pressed
@@ -67,17 +65,20 @@ void keyboard_event_loop(void)
             {
                 ascii = shift_pressed ? scancode_shift_to_ascii[scancode] : scancode_to_ascii[scancode];
                 if (ascii)
-                    terminal_putchar(ascii);
+                {
+                    return ascii;
+                }
             }
         }
         else // key released
         {
             uint8_t released_key = scancode & 0x7F;
+            if (released_key == 0x2A || released_key == 0x36) // Shift key released
             {
                 shift_pressed = false;
             }
 
         }
-
     }
+
 }

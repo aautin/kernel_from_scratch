@@ -8,8 +8,10 @@ enum segment
     NULL_I = 0,
     KERNEL_CODE_I,
     KERNEL_DATA_I,
+    KERNEL_STACK_I,
     USER_CODE_I,
-    USER_DATA_I
+    USER_DATA_I,
+    USER_STACK_I,
 }; typedef enum segment segment;
 
 enum access_flags

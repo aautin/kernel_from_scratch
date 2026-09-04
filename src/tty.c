@@ -52,6 +52,7 @@ static void terminal_update_cursor(size_t col, size_t row)
 	outb((uint8_t)((pos >> 8) & 0xFF), 0x3D5);
 }
 
+
 void terminal_setcolor(uint8_t color)
 {
 	terminal_color = color;
@@ -90,12 +91,31 @@ static void terminal_newline()
 	}
 }
 
+static void terminal_backspace()
+{
+	if (terminal_column > 0)
+	{
+		terminal_column--;
+		terminal_putentryat(' ', terminal_color, terminal_column, terminal_row);
+	}
+	else if (terminal_row > 0)
+	{
+		terminal_row--;
+		terminal_column = VGA_WIDTH - 1;
+		terminal_putentryat(' ', terminal_color, terminal_column, terminal_row);
+	}
+}
+
 void terminal_putchar(char c)
 {
 	unsigned char uc = c;
 	if (uc == '\n')
 	{
 		terminal_newline();
+	}
+	else if (uc == '\b')
+	{
+		terminal_backspace();
 	}
 	else
 	{

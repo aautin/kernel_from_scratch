@@ -12,7 +12,7 @@ section .gdt
     global gdt_flush
 
     gdt_start:
-        resq 6
+        resq 7
     gdt_end:
 
     gdt_flush:
