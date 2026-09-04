@@ -42,7 +42,7 @@ static bool is_lock = false;
 static void execute()
 {
 	char buffer[256];
-	if (terminal_last_word(buffer, sizeof(buffer)))
+	if (terminal_get_input(buffer, sizeof(buffer)))
 	{
 		shell_execute(buffer);
 	}
@@ -75,7 +75,7 @@ void keyboard_interrupt_handler(uint32_t scancode)
 			c = toupper(c);
 		}
 
-		terminal_putc(c);
+		terminal_putc_input(c);
 		return;
 	}
 
@@ -88,13 +88,13 @@ void keyboard_interrupt_handler(uint32_t scancode)
 			execute();
 			break;
 		case KEY_SPACE:
-			terminal_putc(' ');
+			terminal_putc_input(' ');
 			break;
 		case KEY_CAPS:
 			is_lock ^= 1;
 			break;
 		case KEY_BACKSPACE:
-			terminal_del(1);
+			// terminal_del_input(1);
 			break;
 		case KEY_TAB:
 			terminal_switch_screen();
@@ -103,20 +103,7 @@ void keyboard_interrupt_handler(uint32_t scancode)
 			terminal_switch_color_scheme();
 			break;
 		
-		case KEY_LEFT:
-			terminal_move(TERMINAL_CURSOR_LEFT);
-			break;
-		case KEY_RIGHT:
-			terminal_move(TERMINAL_CURSOR_RIGHT);
-			break;
-		case KEY_UP:
-			terminal_move(TERMINAL_CURSOR_UP);
-			break;
-		case KEY_DOWN:
-			terminal_move(TERMINAL_CURSOR_DOWN);
-			break;
-		
 		default:
-			terminal_putc('?');
+			terminal_putc_input('?');
 	}
 }

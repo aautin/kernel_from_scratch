@@ -5,13 +5,13 @@
 
 uint64_t putchar(char c)
 {
-	terminal_putc(c);
+	terminal_putc_output(c);
 	return 1;
 }
 
 uint64_t putstr(const char* s)
 {
-	terminal_puts(s);
+	terminal_puts_output(s);
 	return strlen(s);
 }
 
@@ -21,13 +21,13 @@ uint32_t putnbr(int32_t number)
 
 	if (number == 0)
 	{
-		terminal_putc('0');
+		terminal_putc_output('0');
 		return 1;
 	}
 
 	if (number < 0)
 	{
-		terminal_putc('-');
+		terminal_putc_output('-');
 		count++;
 		uint32_t absolute_number = (uint32_t) (-(number + 1)) + 1;
 		char digits[20];
@@ -41,7 +41,7 @@ uint32_t putnbr(int32_t number)
 
 		for (int i = index - 1; i >= 0; i--)
 		{
-			terminal_putc(digits[i]);
+			terminal_putc_output(digits[i]);
 			count++;
 		}
 
@@ -60,7 +60,7 @@ uint32_t putnbr(int32_t number)
 
 	for (int i = index - 1; i >= 0; i--)
 	{
-		terminal_putc(digits[i]);
+		terminal_putc_output(digits[i]);
 		count++;
 	}
 
@@ -74,7 +74,7 @@ uint64_t puthex(uint64_t number)
 
     if (number == 0)
     {
-        terminal_putc('0');
+        terminal_putc_output('0');
         return 1;
     }
 
@@ -89,7 +89,7 @@ uint64_t puthex(uint64_t number)
 
     while (index--)
     {
-        terminal_putc(hex_digits[index]);
+        terminal_putc_output(hex_digits[index]);
         count++;
     }
 
@@ -108,6 +108,7 @@ uint64_t printk(const char *s, ...)
 	uint64_t count;
 
 	va_start(args, s);
+	terminal_begin_output();
 
 	count = 0;
 	for (uint64_t i = 0; s[i]; i++)
@@ -156,6 +157,7 @@ uint64_t printk(const char *s, ...)
 		}
 	}
 	va_end(args);
-
+	terminal_end_output();
+	
 	return count;
 }

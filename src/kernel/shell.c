@@ -113,7 +113,6 @@ bool shell_execute(const char* command)
 	{
 		if (strcmp(command, shell.commands[i].name) == 0)
 		{
-			terminal_clear();
 			shell.commands[i].function();
 			shell.last_command = &shell.commands[i];
 			return true;
