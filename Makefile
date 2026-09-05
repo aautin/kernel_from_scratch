@@ -58,7 +58,7 @@ ISO      := $(ISO_PATH)/$(ISO_FILE)
 
 GRUB_CFG := $(SRC_PATH)/misc/grub.cfg
 
-ISO_SRC := $(ISO_PATH)/boot/$(NAME) $(ISO_PATH)/boot/grub/$(GRUB_CFG)
+ISO_SRC := $(ISO_PATH)/boot/$(NAME) $(ISO_PATH)/boot/grub/grub.cfg
 
 DOCKERFILE   := $(SRC_PATH)/misc/Dockerfile
 DOCKER_IMAGE := kfs-builder

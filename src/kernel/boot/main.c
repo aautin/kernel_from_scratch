@@ -3,6 +3,7 @@
 #include "gdt.h"
 #include "pic.h"
 #include "shell.h"
+#include "terminal.h"
 
 extern uint32_t irq1_stub();
 extern void     register_gdt();
@@ -24,6 +25,7 @@ static void hang()
 void kernel_main(multiboot_info_t* mbi)
 {
 	shell_init(mbi);
+	terminal_init();
 
 	register_gdt();
 	remap_pic();

@@ -12,7 +12,6 @@ enum keyboard_special_scancode
 	KEY_TAB       = 0x0F, // Switch screen
 	KEY_CTRL      = 0x1D, // Switch color scheme
 	KEY_BACKSPACE = 0x0E, // Delete last character
-	KEY_SPACE     = 0x39, // Put a space character
 	KEY_ENTER     = 0x1C, // Execute a command
 
 	KEY_LEFT  = 0x4B, // Move cursor left
@@ -31,7 +30,7 @@ static const char scancode_map[128] =
 	't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0, 0, 
 	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
 	'\'', '`', 0, '\\', 'z', 'x', 'c', 'v', 'b', 'n',
-	'm', '.', '/', 0, '*', 0, 0, 0, ' ', 0,
+	'm', '.', '/', 0, '*', 0, 0, ' ', 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -41,7 +40,7 @@ static bool is_lock = false;
 
 static void execute()
 {
-	char buffer[256];
+	char buffer[256] = {0};
 	if (terminal_get_input(buffer, sizeof(buffer)))
 	{
 		shell_execute(buffer);
@@ -78,7 +77,7 @@ void keyboard_interrupt_handler(uint32_t scancode)
 		terminal_putc_input(c);
 		return;
 	}
-
+	
 	switch (scancode)
 	{
 		//
@@ -87,20 +86,23 @@ void keyboard_interrupt_handler(uint32_t scancode)
 		case KEY_ENTER:
 			execute();
 			break;
-		case KEY_SPACE:
-			terminal_putc_input(' ');
+		case KEY_BACKSPACE:
+			terminal_del_input(1);
 			break;
 		case KEY_CAPS:
 			is_lock ^= 1;
-			break;
-		case KEY_BACKSPACE:
-			// terminal_del_input(1);
 			break;
 		case KEY_TAB:
 			terminal_switch_screen();
 			break;
 		case KEY_CTRL:
 			terminal_switch_color_scheme();
+			break;
+		case KEY_UP:
+			terminal_move(TERMINAL_CURSOR_UP);
+			break;
+		case KEY_DOWN:
+			terminal_move(TERMINAL_CURSOR_DOWN);
 			break;
 		
 		default:

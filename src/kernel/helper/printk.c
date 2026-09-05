@@ -3,19 +3,19 @@
 #include "terminal.h"
 #include "string.h"
 
-uint64_t putchar(char c)
+static uint64_t putchar(char c)
 {
 	terminal_putc_output(c);
 	return 1;
 }
 
-uint64_t putstr(const char* s)
+static uint64_t putstr(const char* s)
 {
 	terminal_puts_output(s);
 	return strlen(s);
 }
 
-uint32_t putnbr(int32_t number)
+static uint32_t putnbr(int32_t number)
 {
 	uint32_t count = 0;
 
@@ -67,7 +67,7 @@ uint32_t putnbr(int32_t number)
 	return count;
 }
 
-uint64_t puthex(uint64_t number)
+static uint64_t puthex(uint64_t number)
 {
     uint64_t count = 0;
     const char *digits = "0123456789abcdef";
@@ -92,11 +92,11 @@ uint64_t puthex(uint64_t number)
         terminal_putc_output(hex_digits[index]);
         count++;
     }
-
+	
     return count;
 }
 
-uint32_t putptr(void* ptr)
+static uint32_t putptr(void* ptr)
 {
 	uint32_t address = (uint32_t) ptr;
 	return putstr("0x") + puthex(address);
@@ -108,7 +108,6 @@ uint64_t printk(const char *s, ...)
 	uint64_t count;
 
 	va_start(args, s);
-	terminal_begin_output();
 
 	count = 0;
 	for (uint64_t i = 0; s[i]; i++)
@@ -157,7 +156,6 @@ uint64_t printk(const char *s, ...)
 		}
 	}
 	va_end(args);
-	terminal_end_output();
 	
 	return count;
 }

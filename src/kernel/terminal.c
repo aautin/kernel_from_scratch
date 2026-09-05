@@ -5,7 +5,7 @@
 #include "string.h"
 #include "mem.h"
 
-#define TERMINAL_PROMPT "42 > "
+#define TERMINAL_PROMPT "42> "
 
 enum terminal
 {
@@ -50,6 +50,11 @@ typedef struct state_s state_t;
 static screen_t screens[TERMINAL_SCREEN_COUNT];
 static state_t  state;
 
+static screen_t* current_screen()
+{
+	return &screens[state.terminal_index];
+}
+
 static void put_screen()
 {
 	for (uint32_t x = 0; x < TERMINAL_WIDTH; x++)
@@ -63,9 +68,14 @@ static void put_screen()
 	}
 }
 
-static screen_t* current_screen()
+static bool is_cursor_above_visible()
 {
-	return &screens[state.terminal_index];
+	return current_screen()->cursor_y < current_screen()->scroll_y;
+}
+
+static bool is_cursor_below_visible()
+{
+	return current_screen()->cursor_y >= current_screen()->scroll_y + VGA_HEIGHT;
 }
 
 static inline bool can_scroll_up()
@@ -75,22 +85,12 @@ static inline bool can_scroll_up()
 
 static inline bool can_scroll_down()
 {
-	return current_screen()->scroll_y + VGA_HEIGHT < TERMINAL_HEIGHT;
+	return (current_screen()->scroll_y + VGA_HEIGHT < TERMINAL_HEIGHT) && is_cursor_below_visible();
 }
 
 static uint8_t y_to_vga(uint8_t y)
 {
 	return y - current_screen()->scroll_y;
-}
-
-static bool is_cursor_above_visible()
-{
-	return current_screen()->cursor_y < current_screen()->scroll_y;
-}
-
-static bool is_cursor_below_visible()
-{
-	return current_screen()->cursor_y >= current_screen()->scroll_y + VGA_HEIGHT;
 }
 
 static void scroll_down()
@@ -102,7 +102,7 @@ static void scroll_down()
 	vga_put_cursor(screen->cursor_x, y_to_vga(screen->cursor_y));
 }
 
-static void scroll_down()
+static void scroll_up()
 {
 	screen_t* screen = current_screen();
 
@@ -129,22 +129,20 @@ static void move_screen_up()
 
 static void align_scroll_to_cursor()
 {
-	screen_t* screen = current_screen();
-
-	if (is_cursor_above_visible())
+	while (is_cursor_above_visible())
 	{
-		screen->scroll_y = screen->cursor_y;
+		scroll_up();
 	}
-	else if (is_cursor_below_visible())
+	while(is_cursor_below_visible())
 	{
-		screen->scroll_y = screen->cursor_y - VGA_HEIGHT + 1;
+		scroll_down();
 	}
 }
 
 static void putc(char c)
 {
 	screen_t* screen = current_screen();
-
+	
 	if (c == '\n')
 	{
 		if (screen->cursor_y + 1 >= TERMINAL_HEIGHT)
@@ -155,23 +153,22 @@ static void putc(char c)
 			//
 			move_screen_up();
 		}
-
+		
 		for (uint32_t x = screen->cursor_x; x < TERMINAL_WIDTH; x++)
 		{
 			screen_cell_t* cell = &screen->data[screen->cursor_y][x];
 			cell->fg_color = state.colors[state.color_index];
 			cell->bg_color = VGA_BLACK;
 			cell->character = ' ';
-			vga_set_cell(' ', cell->fg_color, cell->bg_color, x, cursor_y_to_vga());
+			vga_set_cell(' ', cell->fg_color, cell->bg_color, x, y_to_vga(screen->cursor_y));
 		}
-
-		put_screen();
+		
 		
 		screen->cursor_x = 0;
 		screen->cursor_y++;
 		align_scroll_to_cursor();
-
-		vga_put_cursor(screen->cursor_x, cursor_y_to_vga());
+		vga_put_cursor(screen->cursor_x, y_to_vga(screen->cursor_y));
+		
 		return;
 	}
 	
@@ -179,9 +176,9 @@ static void putc(char c)
 	cell->fg_color = state.colors[state.color_index];
 	cell->bg_color = VGA_BLACK;
 	cell->character = c;
-
-	vga_set_cell(c, cell->fg_color, cell->bg_color, screen->cursor_x, cursor_y_to_vga());
-
+	
+	vga_set_cell(c, cell->fg_color, cell->bg_color, screen->cursor_x, y_to_vga(screen->cursor_y));
+	
 	screen->cursor_x++;
 	if (screen->cursor_x >= TERMINAL_WIDTH)
 	{
@@ -195,10 +192,25 @@ static void putc(char c)
 			// We move up the whole screen to make space for the new line
 			//
 			move_screen_up();
-		}
-		
-		align_scroll_to_cursor();
-		put_screen();
+		}	
+	}
+	
+	vga_put_cursor(screen->cursor_x, y_to_vga(screen->cursor_y));
+	align_scroll_to_cursor();
+	put_screen();
+}
+
+static void put_prompt()
+{
+	screen_t* screen = current_screen();
+	for (uint32_t i = 0; TERMINAL_PROMPT[i]; i++)
+	{
+		screen_cell_t* cell = &screen->data[screen->cursor_y][screen->cursor_x];
+		cell->fg_color  = state.colors[state.color_index];
+		cell->bg_color  = VGA_BLACK;
+		cell->character = TERMINAL_PROMPT[i];
+
+		putc(TERMINAL_PROMPT[i]);
 	}
 }
 
@@ -206,20 +218,26 @@ void terminal_init()
 {
 	state.terminal_index = 0;
 	state.color_index    = 0;
-
+	
 	state.colors[0] = VGA_WHITE;
 	state.colors[1] = VGA_BLUE;
 	state.colors[2] = VGA_RED;
-
+	
 	for (uint32_t i = 0; i < TERMINAL_SCREEN_COUNT; i++)
 	{
 		state.terminal_index = i;
+
+		current_screen()->cursor_x = 0;
+		current_screen()->cursor_y = 0;
+		current_screen()->scroll_y = 0;
+
 		terminal_clear();
+		put_prompt();
 	}
 
 	put_screen();
 	vga_put_cursor(current_screen()->cursor_x, y_to_vga(current_screen()->cursor_y));
-	vga_set_cellursor_visibility(true);
+	vga_set_cursor_visibility(true);
 }
 
 void terminal_clear()
@@ -237,24 +255,9 @@ void terminal_clear()
 			cell->character = ' ';
 		}
 	}
-
-	for (uint32_t i = 0; TERMINAL_PROMPT[i]; i++)
-	{
-		uint32_t x = i % TERMINAL_WIDTH;
-		uint32_t y = i / TERMINAL_WIDTH;
-
-		screen_cell_t* cell = &screen->data[y][x];
-		cell->fg_color  = state.colors[state.color_index];
-		cell->bg_color  = VGA_BLACK;
-		cell->character = TERMINAL_PROMPT[i];
-	}
-
-	uint32_t prompt_length = strlen(TERMINAL_PROMPT);
-	screen->cursor_x = prompt_length % TERMINAL_WIDTH;
-	screen->cursor_y = prompt_length / TERMINAL_WIDTH;
-
+	screen->cursor_x = 0;
+	screen->cursor_y = 0;
 	screen->scroll_y = 0;
-
 	screen->input_size = 0;
 }
 
@@ -276,6 +279,8 @@ void terminal_begin_output()
 	screen_t* screen = current_screen();
 	putc('\n');
 	screen->input_size = -1;
+
+	vga_set_cursor_visibility(false);
 }
 
 void terminal_end_output()
@@ -285,11 +290,9 @@ void terminal_end_output()
 	{
 		putc('\n');
 	}
-	for (uint32_t i = 0; TERMINAL_PROMPT[i]; i++)
-	{
-		putc(TERMINAL_PROMPT[i]);
-	}
+	put_prompt();
 	screen->input_size = 0;
+	vga_set_cursor_visibility(true);
 }
 
 void terminal_putc_output(char c)
@@ -344,32 +347,114 @@ void terminal_putc_input(char input)
 
 bool terminal_get_input(char* buffer, uint32_t buffer_size)
 {
+    screen_t* screen = current_screen();
+    if (screen->input_size < 0)
+    {
+        //
+        // The terminal is not in input mode
+        //
+        return false;
+    }
+
+    if ((int32_t) buffer_size < screen->input_size + 1)
+    {
+        //
+        // The buffer is too small to hold the input
+        //
+        return false;
+    }
+
+    for (uint32_t i = 0; i < (uint32_t) screen->input_size; i++)
+    {
+        int32_t position = (screen->cursor_x - screen->input_size) + i;
+        uint32_t x = position % TERMINAL_WIDTH;
+        uint32_t y = screen->cursor_y + (position / TERMINAL_WIDTH);
+
+        const screen_cell_t* cell = &screen->data[y][x];
+        buffer[i] = cell->character;
+    }
+    buffer[screen->input_size] = '\0';
+
+    return true;
+}
+
+void terminal_del_input(uint32_t count)
+{
 	screen_t* screen = current_screen();
 	if (screen->input_size < 0)
 	{
 		//
 		// The terminal is not in input mode
 		//
-		return false;
+		return;
 	}
 
-	if (buffer_size < screen->input_size + 1)
+	if (count > (uint32_t) screen->input_size)
 	{
 		//
-		// The buffer is too small to hold the input
+		// The count exceeds the current input size, so we delete all input
 		//
-		return false;
+		count = (uint32_t) screen->input_size;
 	}
 
-	for (uint32_t i = 0; i < buffer_size - 1 && i < (uint32_t) screen->input_size; i++)
+	for (uint32_t i = 0; i < count; i++)
 	{
-		uint32_t x = (screen->cursor_x - screen->input_size + i) % TERMINAL_WIDTH;
-		uint32_t y = (screen->cursor_y - screen->input_size + i) / TERMINAL_WIDTH;
+		if (screen->cursor_x == 0 && screen->cursor_y == 0)
+		{
+			break;
+		}
 
-		const screen_cell_t* cell = &screen->data[y][x];
-		buffer[i] = cell->character;
+		if (screen->cursor_x == 0)
+		{
+			screen->cursor_y--;
+			screen->cursor_x = TERMINAL_WIDTH - 1;
+		}
+		else
+		{
+			screen->cursor_x--;
+		}
+
+		uint32_t x = screen->cursor_x;
+		uint32_t y = screen->cursor_y;
+
+		screen_cell_t* cell = &screen->data[y][x];
+		cell->fg_color = state.colors[state.color_index];
+		cell->bg_color = VGA_BLACK;
+		cell->character = ' ';
+
+		vga_set_cell(' ', cell->fg_color, cell->bg_color, x, y_to_vga(y));
 	}
-	buffer[screen->input_size] = '\0';
+	screen->input_size -= count;
+	vga_put_cursor(screen->cursor_x, y_to_vga(screen->cursor_y));
+}
 
-	return true;
+void terminal_move(enum terminal_cursor_direction direction)
+{
+	screen_t* screen = current_screen();
+	if (screen->input_size < 0)
+	{
+		//
+		// The terminal is not in input mode
+		//
+		return;
+	}
+
+	switch (direction)
+	{
+	case TERMINAL_CURSOR_UP:
+		if (can_scroll_up())
+		{
+			scroll_up();
+		}
+		break;
+	case TERMINAL_CURSOR_DOWN:
+		if (can_scroll_down())
+		{
+			scroll_down();
+		}
+		break;
+	
+	default:
+		break;
+	}
 }

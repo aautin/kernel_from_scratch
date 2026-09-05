@@ -24,7 +24,7 @@ static uint16_t get_cell(uint8_t character, uint8_t fg_color, uint8_t bg_color)
 	return (uint16_t) character | ((uint16_t) get_color(fg_color, bg_color) << 8);
 }
 
-void vga_set_cellursor_visibility(bool visible)
+void vga_set_cursor_visibility(bool visible)
 {
 	uint8_t cursor_start = inb(VGA_CURSOR_PORT_COMMAND + 0x0A);
 	uint8_t cursor_end   = inb(VGA_CURSOR_PORT_COMMAND + 0x0B);

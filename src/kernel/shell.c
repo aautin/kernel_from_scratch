@@ -60,26 +60,23 @@ static void last()
 
 static void pmultiboot()
 {
-	terminal_clear();
 	print_multiboot_info(shell.mbi);
 }
 
 static void pstack(void)
 {
-	uint32_t *ebp;
-	uint32_t *esp;
+	uint32_t* ebp;
+	uint32_t* esp;
 
 	asm volatile("mov %%ebp, %0" : "=r"(ebp));
 	asm volatile("mov %%esp, %0" : "=r"(esp));
 
 	printk("=== Kernel Stack Dump ===\n");
-
 	for (uint32_t *p = esp; p <= ebp; p++)
 	{
-		printk("0x%x: ", (uint32_t) p);
-		puthex(*p);
-		terminal_putc('\n');
+		printk("0x%x: %x\n", (uint32_t) p, *p);
 	}
+	printk("=========================\n");
 }
 
 static void reboot()
@@ -94,30 +91,56 @@ static void reboot()
 	outb(PS2_CONTROLLER_STATUS_PORT, PS2_REBOOT_COMMAND);
 }
 
+static void add_shell_cmd(uint8_t index, const char* name,
+	const char* desc, void (*command)())
+{
+	if (index < COMMAND_COUNT)
+	{
+		shell_command_t* cmd = &shell.commands[index];
+		cmd->function = command;
+
+		strncpy(cmd->name,        name, COMMAND_NAME_MAX_LENGTH - 1);
+		strncpy(cmd->description, desc, COMMAND_DESCRIPTION_MAX_LENGTH - 1);
+	}
+}
+
 void shell_init(multiboot_info_t* mbi)
 {
 	shell.mbi          = mbi;
 	shell.last_command = 0;
 
-	shell.commands[0] = (shell_command_t){"help", "Display this help message", &help};
-	shell.commands[1] = (shell_command_t){"clear", "Clear the terminal screen", &clear};
-	shell.commands[2] = (shell_command_t){"last", "Execute the last command", &last};
-	shell.commands[3] = (shell_command_t){"pmultiboot", "Print multiboot infos", &pmultiboot};
-	shell.commands[4] = (shell_command_t){"pstack", "Print the kernel stack", &pstack};
-	shell.commands[5] = (shell_command_t){"reboot", "Reboot the system", &reboot};
+	add_shell_cmd(0, "help",       "Display the commands list", &help);
+	add_shell_cmd(1, "clear",      "Clear the terminal screen", &clear);
+	add_shell_cmd(2, "last",       "Execute the last command",  &last);
+	add_shell_cmd(3, "pmultiboot", "Print multiboot infos",     &pmultiboot);
+	add_shell_cmd(4, "pstack",     "Print the kernel stack",    &pstack);
+	add_shell_cmd(5, "reboot",     "Reboot the system",         &reboot);
 }
 
 bool shell_execute(const char* command)
 {
+	
 	for (int i = 0; i < COMMAND_COUNT; i++)
 	{
 		if (strcmp(command, shell.commands[i].name) == 0)
 		{
+			terminal_begin_output();
+
 			shell.commands[i].function();
-			shell.last_command = &shell.commands[i];
+
+			if (strcmp(command, "last") != 0)
+			{
+				shell.last_command = &shell.commands[i];
+			}
+			
+			terminal_end_output();
 			return true;
 		}
 	}
+
+	terminal_begin_output();
+	printk("Unknown command: %s\n", command);
+	terminal_end_output();
 
 	return false;
 }

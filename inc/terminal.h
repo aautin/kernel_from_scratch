@@ -6,8 +6,6 @@ enum terminal_cursor_direction
 {
 	TERMINAL_CURSOR_UP,
 	TERMINAL_CURSOR_DOWN,
-	TERMINAL_CURSOR_LEFT,
-	TERMINAL_CURSOR_RIGHT,
 };
 
 //
@@ -53,10 +51,9 @@ void terminal_puts_output(const char* message);
 //
 void terminal_putc_input(char input);
 bool terminal_get_input(char* buffer, uint32_t buffer_size);
-// void terminal_del_input(uint32_t count);
+void terminal_del_input(uint32_t count);
 
 //
-// A left or right move allows the cursor to move within the input.
 // A up or down move allows the manual scrolling of the terminal.
 //
-// void terminal_move(enum terminal_cursor_direction direction);
+void terminal_move(enum terminal_cursor_direction direction);
