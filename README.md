@@ -69,7 +69,7 @@ The kernel is freestanding: it is compiled with `-ffreestanding`, `-fno-builtin`
 
 ## Kernel in action
 
-
+![demo](doc/kernel_in_action.gif)
 
 ## Using the kernel
 
