@@ -64,17 +64,9 @@ DOCKERFILE   := $(SRC_PATH)/misc/Dockerfile
 DOCKER_IMAGE := kfs-builder
 DOCKER_CMD   := grub-mkrescue -o $(ISO_FILE) $(ISO_PATH)
 
-.PHONY: all clean fclean re run print_src print_obj
+.PHONY: all clean fclean re run
 
 all: $(ISO)
-
-print_src:
-	@echo "C source files: $(C_SRC)"
-	@echo "Assembly source files: $(AS_SRC)"
-
-print_obj:
-	@echo "C object files: $(C_OBJS)"
-	@echo "Assembly object files: $(AS_OBJS)"
 
 $(NAME): $(C_OBJS) $(AS_OBJS)
 	$(LD) $(LDFLAGS) -T $(LD_SCRIPT) -o $(NAME) $(C_OBJS) $(AS_OBJS)
