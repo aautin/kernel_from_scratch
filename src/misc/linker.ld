@@ -48,6 +48,7 @@ SECTIONS
 
 	.stack (NOLOAD) :
 	{
+		. = ALIGN(16);
 		stack_bottom = .;
 		. = . + 0x4000;
 		stack_top = .;

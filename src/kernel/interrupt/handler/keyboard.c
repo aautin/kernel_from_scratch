@@ -104,7 +104,10 @@ void keyboard_interrupt_handler(uint32_t scancode)
 		case KEY_DOWN:
 			terminal_move(TERMINAL_CURSOR_DOWN);
 			break;
-		
+		case KEY_LEFT:
+			break;
+		case KEY_RIGHT:
+			break;
 		default:
 			terminal_putc_input('?');
 	}
