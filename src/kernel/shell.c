@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include <stdbool.h>
 
 #include "printk.h"
 #include "port.h"
