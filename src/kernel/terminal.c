@@ -203,14 +203,8 @@ static void putc(char c)
 
 static void put_prompt()
 {
-	screen_t* screen = current_screen();
 	for (uint32_t i = 0; TERMINAL_PROMPT[i]; i++)
 	{
-		screen_cell_t* cell = &screen->data[screen->cursor_y][screen->cursor_x];
-		cell->fg_color  = state.colors[state.color_index];
-		cell->bg_color  = VGA_BLACK;
-		cell->character = TERMINAL_PROMPT[i];
-
 		putc(TERMINAL_PROMPT[i]);
 	}
 }
@@ -228,15 +222,9 @@ void terminal_init()
 	{
 		state.terminal_index = i;
 
-		current_screen()->cursor_x = 0;
-		current_screen()->cursor_y = 0;
-		current_screen()->scroll_y = 0;
-
 		terminal_clear();
 		put_prompt();
 	}
-
-	put_screen();
 	vga_put_cursor(current_screen()->cursor_x, y_to_vga(current_screen()->cursor_y));
 	vga_set_cursor_visibility(true);
 }
