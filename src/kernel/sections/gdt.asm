@@ -10,5 +10,5 @@ section .gdt
 	gdt_start:
 		; Reserve 7 quadwords.
 		; For 7 descriptors: null, kernel code-data-stack, user code-data-stack
-		resq 7
+		times 7 dq 0
 	gdt_end:
