@@ -5,6 +5,7 @@
 enum interrupt_vector_index
 {
     INTERRUPT_VECTOR_KEYBOARD = 0x21,
+    INTERRUPT_VECTOR_MOUSE    = 0x2C,
 };
 
 enum interrupt_descriptor_flag

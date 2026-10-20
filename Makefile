@@ -5,7 +5,7 @@ AS       := nasm
 LD       := ld
 
 CDEFAULTFLAGS := -Wall -Wextra -Werror
-CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-stack-protector -fno-pie -fno-pic -m32 -g
+CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-builtin -nostdlib -nodefaultlibs -fno-stack-protector -fno-pie -fno-pic -m32 -g
 ASFLAGS       := -f elf32
 LDFLAGS       := -m elf_i386 -nostdlib
 
@@ -22,13 +22,16 @@ C_SRC_FILES  := kernel/boot/main \
 				\
 				kernel/interrupt/idt \
 				kernel/interrupt/pic \
+				kernel/interrupt/interrupt \
 				kernel/interrupt/handler/keyboard \
+				kernel/interrupt/handler/mouse \
 				\
 				kernel/io/vga \
 				kernel/io/port \
 				\
 				kernel/terminal \
 				kernel/shell \
+				kernel/stack \
 				\
 				kernel/helper/char \
 				kernel/helper/printk \
@@ -62,7 +65,7 @@ ISO_SRC := $(ISO_PATH)/boot/$(NAME) $(ISO_PATH)/boot/grub/grub.cfg
 
 DOCKERFILE   := $(SRC_PATH)/misc/Dockerfile
 DOCKER_IMAGE := kfs-builder
-DOCKER_CMD   := grub-mkrescue -o $(ISO_FILE) $(ISO_PATH)
+DOCKER_CMD   := grub-mkrescue --compress=xz --modules="multiboot normal" --locales="" --fonts="" -o $(ISO_FILE) $(ISO_PATH)
 
 .PHONY: all clean fclean re run
 
@@ -81,13 +84,14 @@ $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
 
 $(ISO_SRC): $(NAME) $(GRUB_CFG)
 	mkdir -p $(ISO_PATH)/boot/grub
-	cp $(NAME) $(ISO_PATH)/boot/$(NAME)
-	cp $(GRUB_CFG) $(ISO_PATH)/boot/grub/grub.cfg
+	cp -f $(NAME) $(ISO_PATH)/boot/$(NAME)
+	cp -f $(GRUB_CFG) $(ISO_PATH)/boot/grub/grub.cfg
 
 $(ISO): $(ISO_SRC)
 	docker build -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
-	docker run --rm -it -v "$(CURDIR):/workspace" -w /workspace $(DOCKER_IMAGE) $(DOCKER_CMD)
-	mv $(ISO_FILE) $(ISO)
+	rm -f $(ISO)
+	docker run --rm --user $(shell id -u):$(shell id -g) -v "$(CURDIR):/workspace" -w /workspace $(DOCKER_IMAGE) $(DOCKER_CMD)
+	mv -f $(ISO_FILE) $(ISO)
 
 run: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)

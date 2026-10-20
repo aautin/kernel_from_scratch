@@ -20,7 +20,9 @@ SECTIONS
 
 	.text :
 	{
+		text_start = .;
 		*(.text)
+		text_end = .;
 	}
 
 	.rodata :

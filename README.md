@@ -73,7 +73,7 @@ The kernel is freestanding: it is compiled with `-ffreestanding`, `-fno-builtin`
 
 ## Using the kernel
 
-After `make run`, GRUB loads `kfs.elf` and the screen shows the `42> ` prompt. Commands are typed through the PS/2 keyboard interrupt handler.
+After `make run`, GRUB loads `kfs.elf` and the screen shows the `$ ` prompt. Commands are typed through the PS/2 keyboard interrupt handler.
 
 | Command | Purpose |
 | --- | --- |
@@ -83,15 +83,16 @@ After `make run`, GRUB loads `kfs.elf` and the screen shows the `42> ` prompt. C
 | `pmultiboot` | Print memory information supplied by GRUB |
 | `pstack` | Dump the current kernel stack |
 | `reboot` | Ask the PS/2 controller to reboot the machine |
+| `halt` | Clear the registers and stop the CPU (`cli; hlt`) |
 
 Keyboard controls:
 
 - `Caps Lock` toggles the simple alphabetic uppercase mode.
-- `Backspace` deletes input characters.
+- `Backspace` deletes the input character before the cursor, `Delete` the one at the cursor.
+- `Key Left` and `Key Right` move the cursor inside the input; typed characters are inserted at the cursor.
 - `Enter` executes the current input line.
-- `Tab` switches between the two in-memory terminal screens.
-- `Ctrl` cycles the terminal color scheme.
-- `Key Up` and `Key Down` scroll the current terminal buffer.
+- `Ctrl + 0–9` switches screen (each screen has its own color).
+- `Key Up` and `Key Down`, or the mouse wheel, scroll the current terminal buffer.
 
 ## How the kernel works
 
@@ -113,11 +114,11 @@ sequenceDiagram
 		Main->>Main: Initialize shell and terminal
 		Main->>CPU: Load GDT and reload segment registers
 		Main->>PIC: Remap 8259A vectors to 0x20 and 0x28
-		Main->>CPU: Install keyboard gate at IDT vector 0x21
+		Main->>CPU: Install the 16 IRQ gates at IDT vectors 0x20-0x2F
 		Main->>CPU: load IDT, then enable interrupts with sti
 		CPU->>Keyboard: Wait in hlt until an IRQ arrives
 		Keyboard->>CPU: IRQ1 with a scan code
-		CPU->>Main: irq1_stub -> keyboard handler -> EOI -> iretd
+		CPU->>Main: irq1_stub -> interrupt_dispatch -> keyboard handler -> EOI -> iretd
 ```
 
 The linker script places the GDT section near `0x800`, loads the Multiboot header and kernel at the 1 MiB boundary, defines the BSS boundaries, and reserves a 16 KiB kernel stack. The boot code disables interrupts while this setup is performed.
@@ -126,15 +127,15 @@ The linker script places the GDT section near `0x800`, loads the Multiboot heade
 
 The kernel creates a Global Descriptor Table (GDT) containing null, kernel code/data/stack, and user code/data/stack descriptors. The user descriptors are prepared for future work; this repository does not switch to user mode.
 
-The Interrupt Descriptor Table (IDT) has 256 entries, but this version installs only the keyboard gate. The legacy 8259A Programmable Interrupt Controller is remapped so hardware IRQs do not overlap CPU exception vectors:
+The Interrupt Descriptor Table (IDT) has 256 entries, but this version installs only the 16 hardware IRQ gates. The legacy 8259A Programmable Interrupt Controller is remapped so hardware IRQs do not overlap CPU exception vectors:
 
 ```text
 CPU exceptions     0x00 - 0x1F
 Master PIC IRQs    0x20 - 0x27   (IRQ1 keyboard = 0x21)
-Slave PIC IRQs     0x28 - 0x2F
+Slave PIC IRQs     0x28 - 0x2F   (IRQ12 mouse = 0x2C)
 ```
 
-The IRQ1 assembly stub saves registers, reads port `0x60`, calls the C keyboard handler, sends an End Of Interrupt command to the master PIC, restores registers, and returns with `iretd`.
+Each IRQ has a small assembly stub that pushes its vector number, then jumps to a common stub. The common stub saves the registers and calls `interrupt_dispatch`, which calls the C handler registered for that vector with `interrupt_register`, then sends an End Of Interrupt command to the PIC (to both PICs for slave IRQs). The common stub then restores the registers and returns with `iretd`. The keyboard handler reads port `0x60` and only stores the scan code in a key buffer: the mouse handler turns wheel movements into Up/Down arrow scan codes in the same buffer, and the main loop in `kernel_main` handles the buffered keys and runs the shell commands outside of the interrupt, then waits in `hlt` for the next key.
 
 **Why did we setup this whole interrupt environment?** 
 The kernel is now ready to receive keyboard input asynchronously, without polling. The CPU can `hlt` until a key is pressed, and the keyboard interrupt will wake it up. This method has several advantages over polling:
@@ -147,8 +148,10 @@ The kernel is now ready to receive keyboard input asynchronously, without pollin
 
 ```mermaid
 flowchart TD
-		K[PS/2 keyboard] -->|scan code on IRQ1| S[irq1_stub.asm]
-		S --> H[keyboard_interrupt_handler]
+		K[PS/2 keyboard] -->|scan code on IRQ1| S[irq_stub.asm -> interrupt_dispatch]
+		M[PS/2 mouse] -->|wheel packet on IRQ12| S
+		S --> B[keyboard / mouse handlers: key buffer]
+		B -->|main loop| H[keyboard_handle_input]
 		H -->|printable key| T[terminal input buffer]
 		H -->|Enter| E[terminal_get_input]
 		E --> X[shell_execute]
@@ -156,13 +159,12 @@ flowchart TD
 		C --> P[printk / terminal output]
 		T --> V[VGA text memory 0xB8000]
 		P --> V
-		H -->|Tab| D[Switch one of two screens]
-		H -->|Ctrl| Y[Cycle color scheme]
+		H -->|Ctrl + digit| D[Switch one of ten screens]
 ```
 
-The terminal keeps two complete screen buffers. Each buffer is 80 columns by 50 logical rows: 25 visible VGA rows plus 25 rows that can be scrolled into view. `put_screen` copies the selected buffer to VGA text memory, while the hardware cursor is updated through VGA ports `0x3D4` and `0x3D5`.
+The terminal keeps ten complete screen buffers, each with its own color. A screen is cleared and gets its first prompt the first time it is shown. Each buffer is 80 columns by 200 logical rows: 25 visible VGA rows plus 175 rows that can be scrolled into view. Each cell is stored as a 16-bit VGA value (character, foreground and background colors). `put_screen` copies the selected buffer to VGA text memory, while the hardware cursor is updated through VGA ports `0x3D4` and `0x3D5`.
 
-`printk` is a small project-local formatter. It supports the format cases used by the shell (`%c`, `%s`, `%d`/`%i`, `%x`, `%llx`, `%p`, and `%%`); it does not provide the complete hosted C `printf` contract.
+`printk` is a small project-local formatter. It supports the format cases used by the shell (`%c`, `%s`, `%d`/`%i`, `%u`, `%x`, `%llx`, `%p`, and `%%`); it does not provide the complete hosted C `printf` contract. Numbers also accept a minimum width, padded with spaces, or with zeros when the width starts with `0`: for example, `printk("%5d", 42)` prints 3 spaces then `42` (5 characters), and `printk("%08x", 0x1234)` prints `00001234` (8 characters).
 
 ## What this kernel and Linux have in common
 

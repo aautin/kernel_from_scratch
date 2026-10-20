@@ -5,10 +5,11 @@
 #include "port.h"
 #include "multiboot.h"
 #include "string.h"
+#include "stack.h"
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256
-#define COMMAND_COUNT                  6
+#define COMMAND_COUNT                  7
 
 #define PS2_CONTROLLER_STATUS_PORT     0x64
 #define PS2_INPUT_BUFFER_FULL          0x02
@@ -72,12 +73,30 @@ static void pstack(void)
 	asm volatile("mov %%ebp, %0" : "=r"(ebp));
 	asm volatile("mov %%esp, %0" : "=r"(esp));
 
-	printk("=== Kernel Stack Dump ===\n");
-	for (uint32_t *p = esp; p <= ebp; p++)
-	{
-		printk("0x%x: %x\n", (uint32_t) p, *p);
-	}
-	printk("=========================\n");
+	stack_dump((uint32_t) esp, (uint32_t) ebp);
+}
+
+static void halt()
+{
+	printk("System halted.\n");
+
+	//
+	// Clear the general purpose registers,
+	// then halt again after any non-maskable interrupt wakes the CPU
+	//
+	__asm__ volatile (
+		"xor %eax, %eax\n"
+		"xor %ebx, %ebx\n"
+		"xor %ecx, %ecx\n"
+		"xor %edx, %edx\n"
+		"xor %esi, %esi\n"
+		"xor %edi, %edi\n"
+		"xor %ebp, %ebp\n"
+		"1:\n"
+		"cli\n"
+		"hlt\n"
+		"jmp 1b\n"
+	);
 }
 
 static void reboot()
@@ -116,6 +135,7 @@ void shell_init(multiboot_info_t* mbi)
 	add_shell_cmd(3, "pmultiboot", "Print multiboot infos",     &pmultiboot);
 	add_shell_cmd(4, "pstack",     "Print the kernel stack",    &pstack);
 	add_shell_cmd(5, "reboot",     "Reboot the system",         &reboot);
+	add_shell_cmd(6, "halt",       "Halt the system",           &halt);
 }
 
 bool shell_execute(const char* command)
@@ -140,7 +160,8 @@ bool shell_execute(const char* command)
 	}
 
 	terminal_begin_output();
-	printk("Unknown command: %s\n", command);
+	if (command[0] != '\0')
+		printk("%s: command not found\n", command);
 	terminal_end_output();
 
 	return false;
