@@ -46,12 +46,18 @@ void terminal_puts_output(const char* message);
 // Those functions handle the input.
 // Cannot delete characters beyond the input.
 //
-// Characters are inserted at the cursor. terminal_del_input() deletes the
-// characters before the cursor (backspace), terminal_del_input_forward() the
-// characters after it (delete).
+// The begin and the end functions are used by get_line() while a command runs,
+// to switch the terminal to input mode and show the cursor, then to print a
+// newline after the input and switch back to output mode, so the command can
+// keep printing.
 //
+// terminal_putc_input() inserts a character at the cursor.
 // terminal_get_input() returns true if there is an input, false otherwise.
+// terminal_del_input() deletes the characters before the cursor (backspace),
+// terminal_del_input_forward() the characters after it (delete).
 //
+void terminal_begin_input();
+void terminal_end_input();
 void terminal_putc_input(char input);
 bool terminal_get_input(char* buffer, uint32_t buffer_size);
 void terminal_del_input(uint32_t count);

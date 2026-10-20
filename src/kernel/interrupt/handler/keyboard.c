@@ -63,6 +63,13 @@ static volatile uint8_t  key_buffer[KEY_BUFFER_SIZE];
 static volatile uint32_t key_buffer_head = 0;
 static volatile uint32_t key_buffer_tail = 0;
 
+//
+// Set by get_line() while it waits for a line: Enter then ends the line
+// instead of executing it as a command.
+//
+static bool line_requested = false;
+static bool line_done      = false;
+
 static void execute()
 {
 	char buffer[256] = {0};
@@ -84,11 +91,12 @@ static void handle_scancode(uint32_t scancode)
 	{
 		if (scancode == KEY_CTRL_RELEASED)
 			is_ctrl = false;
-		else if (is_ctrl)
+		else if (is_ctrl && !line_requested)
 		{
 			//
 			// Any released key that is not a digit gives an index above 9,
 			// which terminal_switch_screen() ignores.
+			// The screen doesn't change while get_line() waits for a line on it.
 			//
 			terminal_switch_screen((uint8_t) (scancode - KEY_SCREEN_SWITCH_OFFSET));
 		}
@@ -141,7 +149,10 @@ static void handle_scancode(uint32_t scancode)
 		// Special keys handling
 		//
 		case KEY_ENTER:
-			execute();
+			if (line_requested)
+				line_done = true;
+			else
+				execute();
 			break;
 		case KEY_BACKSPACE:
 			terminal_del_input(1);
@@ -200,11 +211,62 @@ bool keyboard_has_input()
 
 void keyboard_handle_input()
 {
-	while (keyboard_has_input())
+	//
+	// The keys typed after the Enter that ends a get_line() line are kept
+	// for after get_line() returns
+	//
+	while (keyboard_has_input() && !line_done)
 	{
 		uint8_t scancode = key_buffer[key_buffer_tail];
 		key_buffer_tail = (key_buffer_tail + 1) % KEY_BUFFER_SIZE;
 
 		handle_scancode(scancode);
 	}
+}
+
+uint32_t get_line(char* buffer, uint32_t size)
+{
+	if (size == 0)
+		return 0;
+
+	terminal_begin_input();
+	line_requested = true;
+
+	while (!line_done)
+	{
+		keyboard_handle_input();
+
+		//
+		// Same wait as in kernel_main(): interrupts are disabled while
+		// checking the key buffer, so a key can't arrive between the check
+		// and 'hlt'
+		//
+		__asm__ volatile ("cli");
+		if (!line_done && !keyboard_has_input())
+			__asm__ volatile ("sti; hlt");
+		__asm__ volatile ("sti");
+	}
+
+	char line[256] = {0};
+	terminal_get_input(line, sizeof(line));
+	terminal_end_input();
+
+	line_requested = false;
+	line_done      = false;
+
+	//
+	// Like read(), the line ends with '\n'. It is cut if the buffer is too
+	// small, and always ends with '\0'.
+	//
+	uint32_t length = 0;
+	while (line[length] && length < size - 1)
+	{
+		buffer[length] = line[length];
+		length++;
+	}
+	if (length < size - 1)
+		buffer[length++] = '\n';
+	buffer[length] = '\0';
+
+	return length;
 }

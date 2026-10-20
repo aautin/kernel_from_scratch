@@ -84,6 +84,7 @@ After `make run`, GRUB loads `kfs.elf` and the screen shows the `$ ` prompt. Com
 | `pstack` | Dump the current kernel stack |
 | `reboot` | Ask the PS/2 controller to reboot the machine |
 | `halt` | Clear the registers and stop the CPU (`cli; hlt`) |
+| `read` | Read a line with `get_line()` and print it |
 
 Keyboard controls:
 

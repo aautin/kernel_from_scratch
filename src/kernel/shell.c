@@ -6,10 +6,11 @@
 #include "multiboot.h"
 #include "string.h"
 #include "stack.h"
+#include "keyboard.h"
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256
-#define COMMAND_COUNT                  7
+#define COMMAND_COUNT                  8
 
 #define PS2_CONTROLLER_STATUS_PORT     0x64
 #define PS2_INPUT_BUFFER_FULL          0x02
@@ -76,6 +77,15 @@ static void pstack(void)
 	stack_dump((uint32_t) esp, (uint32_t) ebp);
 }
 
+static void read()
+{
+	char line[256];
+
+	printk("input: ");
+	get_line(line, sizeof(line));
+	printk("output: %s", line);
+}
+
 static void halt()
 {
 	printk("System halted.\n");
@@ -136,6 +146,7 @@ void shell_init(multiboot_info_t* mbi)
 	add_shell_cmd(4, "pstack",     "Print the kernel stack",    &pstack);
 	add_shell_cmd(5, "reboot",     "Reboot the system",         &reboot);
 	add_shell_cmd(6, "halt",       "Halt the system",           &halt);
+	add_shell_cmd(7, "read",       "Read a line and print it",  &read);
 }
 
 bool shell_execute(const char* command)
