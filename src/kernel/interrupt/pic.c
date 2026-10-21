@@ -42,12 +42,13 @@ void remap_pic()
 	
 	//
 	// IMR
-	// Enable IRQ1 (keyboard) and disable all other IRQs on both IPCs.
+	// Enable IRQ1 (keyboard), IRQ2 (slave PIC) and IRQ12 (mouse), and disable
+	// all other IRQs on both IPCs.
 	//
 	outb(PIC_MASTER_DATA,
 		  IMR_BIT_DISABLE_IRQ0
 		// IRQ1 doesn't get disabled
-		| IMR_BIT_DISABLE_IRQ2
+		// IRQ2 doesn't get disabled
 		| IMR_BIT_DISABLE_IRQ3
 		| IMR_BIT_DISABLE_IRQ4
 		| IMR_BIT_DISABLE_IRQ5
@@ -59,7 +60,7 @@ void remap_pic()
 		| IMR_BIT_DISABLE_IRQ1
 		| IMR_BIT_DISABLE_IRQ2
 		| IMR_BIT_DISABLE_IRQ3
-		| IMR_BIT_DISABLE_IRQ4
+		// IRQ4 (IRQ12) doesn't get disabled
 		| IMR_BIT_DISABLE_IRQ5
 		| IMR_BIT_DISABLE_IRQ6
 		| IMR_BIT_DISABLE_IRQ7
