@@ -5,6 +5,11 @@
 
 #include "interrupt.h"
 
+enum keyboard_layout {
+    KEYBOARD_LAYOUT_QWERTY,
+    KEYBOARD_LAYOUT_AZERTY
+};
+
 void keyboard_interrupt_handler(interrupt_frame_t* frame);
 
 //
@@ -18,6 +23,7 @@ void keyboard_push_scancode(uint8_t scancode);
 //
 bool keyboard_has_input();
 void keyboard_handle_input();
+void keyboard_set_layout(enum keyboard_layout new_layout);
 
 //
 // Like read(): waits until Enter is pressed, then copies the typed line,

@@ -10,7 +10,7 @@
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256
-#define COMMAND_COUNT                  8
+#define COMMAND_COUNT                  10
 
 #define PS2_CONTROLLER_STATUS_PORT     0x64
 #define PS2_INPUT_BUFFER_FULL          0x02
@@ -121,6 +121,16 @@ static void reboot()
 	outb(PS2_CONTROLLER_STATUS_PORT, PS2_REBOOT_COMMAND);
 }
 
+static void azerty()
+{
+	keyboard_set_layout(KEYBOARD_LAYOUT_AZERTY);
+}
+
+static void qwerty()
+{
+	keyboard_set_layout(KEYBOARD_LAYOUT_QWERTY);
+}
+
 static void add_shell_cmd(uint8_t index, const char* name,
 	const char* desc, void (*command)())
 {
@@ -139,14 +149,16 @@ void shell_init(multiboot_info_t* mbi)
 	shell.mbi          = mbi;
 	shell.last_command = 0;
 
-	add_shell_cmd(0, "help",       "Display the commands list", &help);
-	add_shell_cmd(1, "clear",      "Clear the terminal screen", &clear);
-	add_shell_cmd(2, "last",       "Execute the last command",  &last);
-	add_shell_cmd(3, "pmultiboot", "Print multiboot infos",     &pmultiboot);
-	add_shell_cmd(4, "pstack",     "Print the kernel stack",    &pstack);
-	add_shell_cmd(5, "reboot",     "Reboot the system",         &reboot);
-	add_shell_cmd(6, "halt",       "Halt the system",           &halt);
-	add_shell_cmd(7, "read",       "Read a line and print it",  &read);
+	add_shell_cmd(0, "help",       "Display the commands list",             &help);
+	add_shell_cmd(1, "clear",      "Clear the terminal screen",             &clear);
+	add_shell_cmd(2, "last",       "Execute the last command",              &last);
+	add_shell_cmd(3, "pmultiboot", "Print multiboot infos",                 &pmultiboot);
+	add_shell_cmd(4, "pstack",     "Print the kernel stack",                &pstack);
+	add_shell_cmd(5, "reboot",     "Reboot the system",                     &reboot);
+	add_shell_cmd(6, "halt",       "Halt the system",                       &halt);
+	add_shell_cmd(7, "read",       "Read a line and print it",              &read);
+	add_shell_cmd(8, "azerty",     "Switch to the Azerty keyboard layout",  &azerty);
+	add_shell_cmd(9, "qwerty",     "Switch to the Qwerty keyboard layout",  &qwerty);
 }
 
 bool shell_execute(const char* command)

@@ -17,16 +17,23 @@ enum keyboard_special_scancode
 	KEY_ENTER     = 0x1C, // Execute a command
 	KEY_DELETE    = 0x53, // Delete the character at the cursor
 
+	
 	KEY_LEFT  = 0x4B, // Move cursor left
 	KEY_RIGHT = 0x4D, // Move cursor right
 	KEY_UP    = 0x48, // Move cursor up
 	KEY_DOWN  = 0x50, // Move cursor down
-
+	
 	//
 	// Hold Ctrl and release a digit to switch screen
 	//
 	KEY_CTRL_PRESSED  = 0x1D,
 	KEY_CTRL_RELEASED = 0x9D,
+
+	//
+	// Hold Shift to write in uppercase
+	//
+	KEY_LEFT_SHIFT_PRESS    = 0x2A,
+	KEY_LEFT_SHIFT_RELEASE  = 0xAA,
 
 	//
 	// Released digit scancodes are 0x82 ('1') to 0x8B ('0'), so subtracting
@@ -35,24 +42,72 @@ enum keyboard_special_scancode
 	KEY_SCREEN_SWITCH_OFFSET = 0x82,
 };
 
-static const char scancode_map[128] =
+#define SCANCODE_MAP_SIZE 128
+static const char maps[2][SCANCODE_MAP_SIZE] =
 {
-	//
-	// 10 elements per row
-	//
-	0, 0, '1', '2', '3', '4', '5', '6', '7', '8',
-	'9', '0', '-', '=', 0, 0, 'q', 'w', 'e', 'r',
-	't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0, 0, 
-	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
-	'\'', '`', 0, '\\', 'z', 'x', 'c', 'v', 'b', 'n',
-	'm', ',', '.', '/', 0, '*', 0, ' ', 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	{
+		//
+		// Qwerty
+		//
+
+		[0x02] = '1', [0x03] = '2', [0x04] = '3',
+		[0x05] = '4', [0x06] = '5', [0x07] = '6',
+		[0x08] = '7', [0x09] = '8', [0x0A] = '9',
+		[0x0B] = '0', [0x0C] = '-', [0x0D] = '=',
+
+		[0x10] = 'q', [0x11] = 'w', [0x12] = 'e',
+		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
+		[0x16] = 'u', [0x17] = 'i', [0x18] = 'o',
+		[0x19] = 'p', [0x1A] = '[', [0x1B] = ']',
+
+		[0x1E] = 'a', [0x1F] = 's', [0x20] = 'd',
+		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
+		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
+		[0x27] = ';', [0x28] = '\'',
+
+		[0x2C] = 'z', [0x2D] = 'x', [0x2E] = 'c',
+		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
+		[0x32] = 'm', [0x33] = ',', [0x34] = '.',
+		[0x35] = '/',
+
+		[0x39] = ' ',
+	},
+	{
+		//
+		// Azerty
+		//
+		[0x02] = '&', [0x03] = 0x82, [0x04] = '"',
+		[0x05] = '\'', [0x06] = '(', [0x07] = '-',
+		[0x08] = 0x8A, [0x09] = '_', [0x0A] = 0x87,
+		[0x0B] = 0x85, [0x0C] = ')', [0x0D] = '=',
+
+		[0x10] = 'a', [0x11] = 'z', [0x12] = 'e',
+		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
+		[0x16] = 'u', [0x17] = 'i', [0x18] = 'o',
+		[0x19] = 'p', [0x1A] = '^', [0x1B] = '$',
+
+		[0x1E] = 'q', [0x1F] = 's', [0x20] = 'd',
+		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
+		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
+		[0x27] = 'm',
+
+		[0x2B] = '*',
+		[0x2C] = 'w', [0x2D] = 'x', [0x2E] = 'c',
+		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
+		[0x32] = ',', [0x33] = ';', [0x34] = ':',
+		[0x35] = '!',
+
+		[0x39] = ' ',
+	}
 };
 
-static bool is_lock = false;
-static bool is_ctrl = false;
+void keyboard_set_layout(enum keyboard_layout layout);
+
+static bool is_lock  = false;
+static bool is_ctrl  = false;
+static bool is_shift = false;
+
+static enum keyboard_layout current_layout = KEYBOARD_LAYOUT_QWERTY;
 
 //
 // Scancodes received by the interrupt handler, waiting to be handled by the
@@ -81,6 +136,19 @@ static void execute()
 
 static void handle_scancode(uint32_t scancode)
 {
+
+	if (scancode == KEY_LEFT_SHIFT_PRESS)
+	{
+		is_shift = true;
+		return;
+	}
+	
+	if (scancode == KEY_LEFT_SHIFT_RELEASE)
+	{
+		is_shift = false;
+		return;
+	}
+
 	if (scancode == KEY_CTRL_PRESSED)
 	{
 		is_ctrl = true;
@@ -103,7 +171,7 @@ static void handle_scancode(uint32_t scancode)
 		return;
 	}
 
-	if (scancode >= sizeof(scancode_map))
+	if (scancode >= SCANCODE_MAP_SIZE)
 	{
 		//
 		// The scancode is out of bounds
@@ -111,7 +179,7 @@ static void handle_scancode(uint32_t scancode)
 		return;
 	}
 
-	if (scancode_map[scancode])
+	if (maps[current_layout][scancode])
 	{
 		//
 		// The character is printable
@@ -125,8 +193,8 @@ static void handle_scancode(uint32_t scancode)
 			return;
 		}
 
-		uint8_t c = scancode_map[scancode];
-		if (is_lock)
+		uint8_t c = maps[current_layout][scancode];
+		if (is_lock ^ is_shift)
 		{
 			c = toupper(c);
 		}
@@ -181,6 +249,11 @@ static void handle_scancode(uint32_t scancode)
 			//
 			break;
 	}
+}
+
+void keyboard_set_layout(enum keyboard_layout new_layout)
+{
+	current_layout = new_layout;
 }
 
 void keyboard_interrupt_handler(interrupt_frame_t* frame)
