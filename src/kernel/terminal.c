@@ -11,7 +11,7 @@
 enum terminal
 {
 	TERMINAL_SCREEN_COUNT = 10,
-	TERMINAL_EXTRA_LINES  = 200 - VGA_HEIGHT, // 200 lines of scrollback per screen
+	TERMINAL_EXTRA_LINES  = 35 - VGA_HEIGHT, // 200 lines of scrollback per screen
 	TERMINAL_WIDTH        = VGA_WIDTH,
 	TERMINAL_HEIGHT       = VGA_HEIGHT + TERMINAL_EXTRA_LINES,
 };

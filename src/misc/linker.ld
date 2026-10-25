@@ -45,6 +45,7 @@ SECTIONS
 		bss_start = .;
 		*(COMMON)
 		*(.bss)
+		*(.bss .bss.*)
 		bss_end = .;
 	}
 
