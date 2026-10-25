@@ -6,7 +6,6 @@
 #include "multiboot.h"
 #include "string.h"
 #include "stack.h"
-#include "keyboard.h"
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256
@@ -30,6 +29,7 @@ struct shell
 	multiboot_info_t* mbi;
 	shell_command_t   commands[COMMAND_COUNT];
 	shell_command_t*  last_command;
+	bool              read_pending;
 };
 typedef struct shell shell_t;
 
@@ -79,11 +79,10 @@ static void pstack(void)
 
 static void read()
 {
-	char line[256];
+	if (shell.read_pending)
+		return;
 
-	printk("input: ");
-	get_line(line, sizeof(line));
-	printk("output: %s", line);
+	shell.read_pending = true;
 }
 
 static void halt()
@@ -138,6 +137,7 @@ void shell_init(multiboot_info_t* mbi)
 {
 	shell.mbi          = mbi;
 	shell.last_command = 0;
+	shell.read_pending = false;
 
 	add_shell_cmd(0, "help",       "Display the commands list", &help);
 	add_shell_cmd(1, "clear",      "Clear the terminal screen", &clear);
@@ -151,7 +151,16 @@ void shell_init(multiboot_info_t* mbi)
 
 bool shell_execute(const char* command)
 {
-	
+	if (shell.read_pending)
+	{
+		terminal_begin_output();
+		printk("read: \"%s\"", command);
+		terminal_end_output(true);
+
+		shell.read_pending = false;
+		return true;
+	}
+
 	for (int i = 0; i < COMMAND_COUNT; i++)
 	{
 		if (strcmp(command, shell.commands[i].name) == 0)
@@ -165,7 +174,10 @@ bool shell_execute(const char* command)
 				shell.last_command = &shell.commands[i];
 			}
 			
-			terminal_end_output();
+			//
+			// No prompt while the read command waits for its line
+			//
+			terminal_end_output(!shell.read_pending);
 			return true;
 		}
 	}
@@ -173,7 +185,12 @@ bool shell_execute(const char* command)
 	terminal_begin_output();
 	if (command[0] != '\0')
 		printk("%s: command not found\n", command);
-	terminal_end_output();
+	terminal_end_output(true);
 
 	return false;
+}
+
+bool is_reading()
+{
+	return shell.read_pending;
 }

@@ -7,7 +7,6 @@
 #include "keyboard.h"
 
 #define KEYBOARD_DATA_PORT 0x60
-#define KEY_RELEASED_MASK 0x80
 #define KEY_BUFFER_SIZE   128
 
 enum keyboard_special_scancode
@@ -27,12 +26,6 @@ enum keyboard_special_scancode
 	//
 	KEY_CTRL_PRESSED  = 0x1D,
 	KEY_CTRL_RELEASED = 0x9D,
-
-	//
-	// Released digit scancodes are 0x82 ('1') to 0x8B ('0'), so subtracting
-	// this offset gives the screens 0 to 8 for '1' to '9', and 9 for '0'.
-	//
-	KEY_SCREEN_SWITCH_OFFSET = 0x82,
 };
 
 static const char scancode_map[128] =
@@ -63,13 +56,6 @@ static volatile uint8_t  key_buffer[KEY_BUFFER_SIZE];
 static volatile uint32_t key_buffer_head = 0;
 static volatile uint32_t key_buffer_tail = 0;
 
-//
-// Set by get_line() while it waits for a line: Enter then ends the line
-// instead of executing it as a command.
-//
-static bool line_requested = false;
-static bool line_done      = false;
-
 static void execute()
 {
 	char buffer[256] = {0};
@@ -87,19 +73,9 @@ static void handle_scancode(uint32_t scancode)
 		return;
 	}
 
-	if (scancode & KEY_RELEASED_MASK)
+	if (scancode == KEY_CTRL_RELEASED)
 	{
-		if (scancode == KEY_CTRL_RELEASED)
-			is_ctrl = false;
-		else if (is_ctrl && !line_requested)
-		{
-			//
-			// Any released key that is not a digit gives an index above 9,
-			// which terminal_switch_screen() ignores.
-			// The screen doesn't change while get_line() waits for a line on it.
-			//
-			terminal_switch_screen((uint8_t) (scancode - KEY_SCREEN_SWITCH_OFFSET));
-		}
+		is_ctrl = false;
 		return;
 	}
 
@@ -111,19 +87,27 @@ static void handle_scancode(uint32_t scancode)
 		return;
 	}
 
+	if (is_ctrl)
+	{
+		//
+		// Ctrl + digit switches screen in the keyboard row order: '1' is the
+		// first screen (index 0) and '0' the last one (index 9)
+		//
+		if (!is_reading() && isdigit(scancode_map[scancode]))
+		{
+			terminal_switch_screen((scancode_map[scancode] - '1' + 10) % 10);
+		}
+
+		return;
+	}
+
 	if (scancode_map[scancode])
 	{
+		
+
 		//
 		// The character is printable
 		//
-
-		if (is_ctrl)
-		{
-			//
-			// Ctrl + digit switches screen, so don't type the character
-			//
-			return;
-		}
 
 		uint8_t c = scancode_map[scancode];
 		if (is_lock)
@@ -134,14 +118,6 @@ static void handle_scancode(uint32_t scancode)
 		terminal_putc_input(c);
 		return;
 	}
-	
-	if (is_ctrl && (scancode == KEY_ENTER || scancode == KEY_BACKSPACE))
-	{
-		//
-		// Ctrl is only a modifier, so it blocks Enter and Backspace too
-		//
-		return;
-	}
 
 	switch (scancode)
 	{
@@ -149,10 +125,7 @@ static void handle_scancode(uint32_t scancode)
 		// Special keys handling
 		//
 		case KEY_ENTER:
-			if (line_requested)
-				line_done = true;
-			else
-				execute();
+			execute();
 			break;
 		case KEY_BACKSPACE:
 			terminal_del_input(1);
@@ -211,62 +184,11 @@ bool keyboard_has_input()
 
 void keyboard_handle_input()
 {
-	//
-	// The keys typed after the Enter that ends a get_line() line are kept
-	// for after get_line() returns
-	//
-	while (keyboard_has_input() && !line_done)
+	while (keyboard_has_input())
 	{
 		uint8_t scancode = key_buffer[key_buffer_tail];
 		key_buffer_tail = (key_buffer_tail + 1) % KEY_BUFFER_SIZE;
 
 		handle_scancode(scancode);
 	}
-}
-
-uint32_t get_line(char* buffer, uint32_t size)
-{
-	if (size == 0)
-		return 0;
-
-	terminal_begin_input();
-	line_requested = true;
-
-	while (!line_done)
-	{
-		keyboard_handle_input();
-
-		//
-		// Same wait as in kernel_main(): interrupts are disabled while
-		// checking the key buffer, so a key can't arrive between the check
-		// and 'hlt'
-		//
-		__asm__ volatile ("cli");
-		if (!line_done && !keyboard_has_input())
-			__asm__ volatile ("sti; hlt");
-		__asm__ volatile ("sti");
-	}
-
-	char line[256] = {0};
-	terminal_get_input(line, sizeof(line));
-	terminal_end_input();
-
-	line_requested = false;
-	line_done      = false;
-
-	//
-	// Like read(), the line ends with '\n'. It is cut if the buffer is too
-	// small, and always ends with '\0'.
-	//
-	uint32_t length = 0;
-	while (line[length] && length < size - 1)
-	{
-		buffer[length] = line[length];
-		length++;
-	}
-	if (length < size - 1)
-		buffer[length++] = '\n';
-	buffer[length] = '\0';
-
-	return length;
 }
