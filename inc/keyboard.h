@@ -24,10 +24,3 @@ void keyboard_push_scancode(uint8_t scancode);
 bool keyboard_has_input();
 void keyboard_handle_input();
 void keyboard_set_layout(enum keyboard_layout new_layout);
-
-//
-// Like read(): waits until Enter is pressed, then copies the typed line,
-// ending with '\n', into the buffer. Called by a command, which can print
-// its own prompt before. Returns the number of characters copied.
-//
-uint32_t get_line(char* buffer, uint32_t size);
