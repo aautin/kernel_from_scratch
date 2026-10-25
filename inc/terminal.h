@@ -34,10 +34,12 @@ void terminal_switch_screen(uint8_t index);
 //
 // The begin and the end functions are used to print a newline before the first
 // output and a new prompt after the last output, and also to disable the cursor
-// while the output print and at then end to move it to the next input
+// while the output print and at then end to move it to the next input.
+// The prompt is not printed if show_prompt is false (e.g. while a read waits
+// for its line).
 //
 void terminal_begin_output();
-void terminal_end_output();
+void terminal_end_output(bool show_prompt);
 void terminal_putc_output(char c);
 void terminal_putnbr_output(int32_t number);
 void terminal_puts_output(const char* message);

@@ -88,10 +88,14 @@ static void handle_scancode(uint32_t scancode)
 	}
 
 	if (is_ctrl)
-	{	
+	{
+		//
+		// Ctrl + digit switches screen in the keyboard row order: '1' is the
+		// first screen (index 0) and '0' the last one (index 9)
+		//
 		if (!is_reading() && isdigit(scancode_map[scancode]))
 		{
-			terminal_switch_screen(scancode_map[scancode] - '0');
+			terminal_switch_screen((scancode_map[scancode] - '1' + 10) % 10);
 		}
 
 		return;

@@ -155,7 +155,7 @@ bool shell_execute(const char* command)
 	{
 		terminal_begin_output();
 		printk("read: \"%s\"", command);
-		terminal_end_output();
+		terminal_end_output(true);
 
 		shell.read_pending = false;
 		return true;
@@ -174,7 +174,10 @@ bool shell_execute(const char* command)
 				shell.last_command = &shell.commands[i];
 			}
 			
-			terminal_end_output();
+			//
+			// No prompt while the read command waits for its line
+			//
+			terminal_end_output(!shell.read_pending);
 			return true;
 		}
 	}
@@ -182,7 +185,7 @@ bool shell_execute(const char* command)
 	terminal_begin_output();
 	if (command[0] != '\0')
 		printk("%s: command not found\n", command);
-	terminal_end_output();
+	terminal_end_output(true);
 
 	return false;
 }

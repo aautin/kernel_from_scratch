@@ -369,14 +369,17 @@ void terminal_begin_output()
 	vga_set_cursor_visibility(false);
 }
 
-void terminal_end_output()
+void terminal_end_output(bool show_prompt)
 {
 	screen_t* screen = current_screen();
 	if (screen->cursor_x != 0)
 	{
 		putc('\n');
 	}
-	put_prompt();
+	if (show_prompt)
+	{
+		put_prompt();
+	}
 	screen->input_size = 0;
 	screen->input_cursor = 0;
 	vga_set_cursor_visibility(true);
