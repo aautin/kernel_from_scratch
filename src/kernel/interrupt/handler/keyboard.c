@@ -226,26 +226,15 @@ void keyboard_handle_input()
 
 uint32_t get_line(char* buffer, uint32_t size)
 {
-	if (size == 0)
-		return 0;
-
-	terminal_begin_input();
-	line_requested = true;
-
-	while (!line_done)
+	if (!line_requested)
 	{
-		keyboard_handle_input();
-
-		//
-		// Same wait as in kernel_main(): interrupts are disabled while
-		// checking the key buffer, so a key can't arrive between the check
-		// and 'hlt'
-		//
-		__asm__ volatile ("cli");
-		if (!line_done && !keyboard_has_input())
-			__asm__ volatile ("sti; hlt");
-		__asm__ volatile ("sti");
+		terminal_begin_input();
+		line_requested = true;
+		line_done      = false;
 	}
+
+	if (!line_done || size == 0)
+		return 0;
 
 	char line[256] = {0};
 	terminal_get_input(line, sizeof(line));

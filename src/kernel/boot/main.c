@@ -44,6 +44,7 @@ void kernel_main(multiboot_info_t* mbi)
 	while (true)
 	{
 		keyboard_handle_input();
+		shell_update();
 
 		//
 		// Halt instruction to stop the CPU until the next interrupt occurs.
