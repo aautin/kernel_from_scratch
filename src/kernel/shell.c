@@ -30,6 +30,7 @@ struct shell
 	multiboot_info_t* mbi;
 	shell_command_t   commands[COMMAND_COUNT];
 	shell_command_t*  last_command;
+	bool              read_pending;
 };
 typedef struct shell shell_t;
 
@@ -79,18 +80,12 @@ static void pstack(void)
 
 static void read()
 {
-	printk("input: ");
-	char line[256];
-	while (!get_line(line, sizeof(line)))
-	{
-		keyboard_handle_input();
+	if (shell.read_pending)
+		return;
 
-		__asm__ volatile ("cli");
-		if (!keyboard_has_input())
-			__asm__ volatile ("sti; hlt");
-		__asm__ volatile ("sti");
-	}
-	printk("output: %s", line);
+	shell.read_pending = true;
+	char unused[1];
+	get_line(unused, sizeof(unused));
 }
 
 static void halt()
@@ -145,6 +140,7 @@ void shell_init(multiboot_info_t* mbi)
 {
 	shell.mbi          = mbi;
 	shell.last_command = 0;
+	shell.read_pending = false;
 
 	add_shell_cmd(0, "help",       "Display the commands list", &help);
 	add_shell_cmd(1, "clear",      "Clear the terminal screen", &clear);
@@ -172,7 +168,8 @@ bool shell_execute(const char* command)
 				shell.last_command = &shell.commands[i];
 			}
 			
-			terminal_end_output();
+			if (!shell.read_pending)
+				terminal_end_output();
 			return true;
 		}
 	}
@@ -183,4 +180,18 @@ bool shell_execute(const char* command)
 	terminal_end_output();
 
 	return false;
+}
+
+void shell_update()
+{
+	if (!shell.read_pending)
+		return;
+
+	char line[256];
+	if (!get_line(line, sizeof(line)))
+		return;
+
+	printk("%s", line);
+	shell.read_pending = false;
+	terminal_end_output();
 }
