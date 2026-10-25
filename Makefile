@@ -61,11 +61,9 @@ ISO      := $(ISO_PATH)/$(ISO_FILE)
 
 GRUB_CFG := $(SRC_PATH)/misc/grub.cfg
 
-ISO_SRC := $(ISO_PATH)/boot/$(NAME) $(ISO_PATH)/boot/grub/grub.cfg
-
 DOCKERFILE   := $(SRC_PATH)/misc/Dockerfile
 DOCKER_IMAGE := kfs-builder
-DOCKER_CMD   := grub-mkrescue --compress=xz --modules="multiboot normal" --locales="" --fonts="" -o $(ISO_FILE) $(ISO_PATH)
+DOCKER_CMD   := grub-mkrescue --compress=xz --modules="multiboot normal" --locales="" --fonts="" -o $(ISO) boot/$(NAME)=$(NAME) boot/grub/grub.cfg=$(GRUB_CFG)
 
 .PHONY: all clean fclean re run
 
@@ -82,16 +80,10 @@ $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $(INC_ARGS) $< -o $@
 
-$(ISO_SRC): $(NAME) $(GRUB_CFG)
-	mkdir -p $(ISO_PATH)/boot/grub
-	cp -f $(NAME) $(ISO_PATH)/boot/$(NAME)
-	cp -f $(GRUB_CFG) $(ISO_PATH)/boot/grub/grub.cfg
-
-$(ISO): $(ISO_SRC)
+$(ISO): $(NAME) $(GRUB_CFG)
 	docker build -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
-	rm -f $(ISO)
+	mkdir -p $(dir $@)
 	docker run --rm --user $(shell id -u):$(shell id -g) -v "$(CURDIR):/workspace" -w /workspace $(DOCKER_IMAGE) $(DOCKER_CMD)
-	mv -f $(ISO_FILE) $(ISO)
 
 run: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)
@@ -100,6 +92,6 @@ clean:
 	rm -rf $(OBJ_PATH)
 
 fclean: clean
-	rm -rf $(NAME) $(ISO_PATH)
+	rm -f $(NAME)
 
 re: fclean all
