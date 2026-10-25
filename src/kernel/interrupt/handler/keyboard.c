@@ -16,12 +16,11 @@ enum keyboard_special_scancode
 	KEY_ENTER     = 0x1C, // Execute a command
 	KEY_DELETE    = 0x53, // Delete the character at the cursor
 
-	
 	KEY_LEFT  = 0x4B, // Move cursor left
 	KEY_RIGHT = 0x4D, // Move cursor right
 	KEY_UP    = 0x48, // Move cursor up
 	KEY_DOWN  = 0x50, // Move cursor down
-	
+
 	//
 	// Hold Ctrl and release a digit to switch screen
 	//
@@ -33,6 +32,8 @@ enum keyboard_special_scancode
 	//
 	KEY_LEFT_SHIFT_PRESS    = 0x2A,
 	KEY_LEFT_SHIFT_RELEASE  = 0xAA,
+	KEY_RIGHT_SHIFT_PRESS   = 0x36,
+	KEY_RIGHT_SHIFT_RELEASE = 0xB6,
 };
 
 #define SCANCODE_MAP_SIZE 128
@@ -56,8 +57,9 @@ static const char maps[2][SCANCODE_MAP_SIZE] =
 		[0x1E] = 'a', [0x1F] = 's', [0x20] = 'd',
 		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
 		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
-		[0x27] = ';', [0x28] = '\'',
+		[0x27] = ';', [0x28] = '\'', [0x29] = '`',
 
+		[0x2B] = '\\',
 		[0x2C] = 'z', [0x2D] = 'x', [0x2E] = 'c',
 		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
 		[0x32] = 'm', [0x33] = ',', [0x34] = '.',
@@ -69,10 +71,10 @@ static const char maps[2][SCANCODE_MAP_SIZE] =
 		//
 		// Azerty
 		//
-		[0x02] = '&', [0x03] = 0x82, [0x04] = '"',
+		[0x02] = '&', [0x03] = 0x82, [0x04] = '"', // 0x82 = é
 		[0x05] = '\'', [0x06] = '(', [0x07] = '-',
-		[0x08] = 0x8A, [0x09] = '_', [0x0A] = 0x87,
-		[0x0B] = 0x85, [0x0C] = ')', [0x0D] = '=',
+		[0x08] = 0x8A, [0x09] = '_', [0x0A] = 0x87, // 0x8A = è, 0x87 = ç
+		[0x0B] = 0x85, [0x0C] = ')', [0x0D] = '=', // 0x85 = à
 
 		[0x10] = 'a', [0x11] = 'z', [0x12] = 'e',
 		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
@@ -82,7 +84,7 @@ static const char maps[2][SCANCODE_MAP_SIZE] =
 		[0x1E] = 'q', [0x1F] = 's', [0x20] = 'd',
 		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
 		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
-		[0x27] = 'm',
+		[0x27] = 'm', [0x28] = 0x97, [0x29] = 0xFD, // 0x97 = ù, 0xFD = ²
 
 		[0x2B] = '*',
 		[0x2C] = 'w', [0x2D] = 'x', [0x2E] = 'c',
@@ -90,12 +92,15 @@ static const char maps[2][SCANCODE_MAP_SIZE] =
 		[0x32] = ',', [0x33] = ';', [0x34] = ':',
 		[0x35] = '!',
 
-		[0x39] = ' ',
+		[0x39] = ' ', [0x56] = '<',
 	}
 };
 
-#define SCANCODE_UPPERMAP_SIZE 0x0E
-static const char upper_maps[2][0x0E] = 
+//
+// Characters written with Shift. Keys without one, like the letters, fall back
+// to toupper
+//
+static const char upper_maps[2][SCANCODE_MAP_SIZE] =
 {
 	{
 		//
@@ -105,6 +110,12 @@ static const char upper_maps[2][0x0E] =
 		[0x05] = '$', [0x06] = '%', [0x07] = '^',
 		[0x08] = '&', [0x09] = '*', [0x0A] = '(',
 		[0x0B] = ')', [0x0C] = '_', [0x0D] = '+',
+
+		[0x1A] = '{', [0x1B] = '}',
+		[0x27] = ':', [0x28] = '"', [0x29] = '~',
+		[0x2B] = '|',
+
+		[0x33] = '<', [0x34] = '>', [0x35] = '?',
 	},
 	{
 		//
@@ -113,13 +124,22 @@ static const char upper_maps[2][0x0E] =
 		[0x02] = '1', [0x03] = '2', [0x04] = '3',
 		[0x05] = '4', [0x06] = '5', [0x07] = '6',
 		[0x08] = '7', [0x09] = '8', [0x0A] = '9',
-		[0x0B] = '0', [0x0C] = 0xB0, [0x0D] = '+',
+		[0x0B] = '0', [0x0C] = 0xF8, [0x0D] = '+', // 0xF8 = °
+
+		[0x1B] = 0x9C, // 0x9C = £
+		[0x28] = '%', [0x2B] = 0xE6, // 0xE6 = µ
+
+		[0x32] = '?', [0x33] = '.', [0x34] = '/',
+		[0x35] = 0x15, // 0x15 = §
+
+		[0x56] = '>',
 	},
 };
 
 static bool is_lock  = false;
 static bool is_ctrl  = false;
-static bool is_shift = false;
+static bool is_left_shift = false;
+static bool is_right_shift = false;
 
 static enum keyboard_layout current_layout = KEYBOARD_LAYOUT_QWERTY;
 
@@ -146,11 +166,19 @@ static void handle_scancode(uint32_t scancode)
 	switch (scancode)
 	{
 		case KEY_LEFT_SHIFT_PRESS:
-			is_shift = true;
+			is_left_shift = true;
 			return;
 
 		case KEY_LEFT_SHIFT_RELEASE:
-			is_shift = false;
+			is_left_shift = false;
+			return;
+
+		case KEY_RIGHT_SHIFT_PRESS:
+			is_right_shift = true;
+			return;
+
+		case KEY_RIGHT_SHIFT_RELEASE:
+			is_right_shift = false;
 			return;
 
 		case KEY_CTRL_PRESSED:
@@ -174,9 +202,9 @@ static void handle_scancode(uint32_t scancode)
 	}
 
 	uint8_t c = maps[current_layout][scancode];
-	if (is_lock ^ is_shift)
+	if (is_lock ^ (is_left_shift || is_right_shift))
 	{
-		if (scancode < SCANCODE_UPPERMAP_SIZE)
+		if (upper_maps[current_layout][scancode])
 		{
 			c = upper_maps[current_layout][scancode];
 		}
