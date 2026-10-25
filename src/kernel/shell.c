@@ -6,7 +6,6 @@
 #include "multiboot.h"
 #include "string.h"
 #include "stack.h"
-#include "keyboard.h"
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256

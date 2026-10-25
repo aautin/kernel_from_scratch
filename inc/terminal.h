@@ -56,8 +56,6 @@ void terminal_puts_output(const char* message);
 // terminal_del_input() deletes the characters before the cursor (backspace),
 // terminal_del_input_forward() the characters after it (delete).
 //
-void terminal_begin_input();
-void terminal_end_input();
 void terminal_putc_input(char input);
 bool terminal_get_input(char* buffer, uint32_t buffer_size);
 void terminal_del_input(uint32_t count);

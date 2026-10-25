@@ -426,27 +426,6 @@ void terminal_puts_output(const char* message)
 	}
 }
 
-void terminal_begin_input()
-{
-	screen_t* screen = current_screen();
-	screen->input_size   = 0;
-	screen->input_cursor = 0;
-	vga_set_cursor_visibility(true);
-}
-
-void terminal_end_input()
-{
-	screen_t* screen = current_screen();
-
-	//
-	// The new line goes after the whole input, not at the cursor
-	//
-	move_cursor(screen->input_size - screen->input_cursor);
-	putc('\n');
-	screen->input_size = -1;
-	vga_set_cursor_visibility(false);
-}
-
 void terminal_putc_input(char input)
 {
 	screen_t* screen = current_screen();

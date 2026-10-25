@@ -7,7 +7,6 @@
 #include "keyboard.h"
 
 #define KEYBOARD_DATA_PORT 0x60
-#define KEY_RELEASED_MASK 0x80
 #define KEY_BUFFER_SIZE   128
 
 enum keyboard_special_scancode
@@ -27,12 +26,6 @@ enum keyboard_special_scancode
 	//
 	KEY_CTRL_PRESSED  = 0x1D,
 	KEY_CTRL_RELEASED = 0x9D,
-
-	//
-	// Released digit scancodes are 0x82 ('1') to 0x8B ('0'), so subtracting
-	// this offset gives the screens 0 to 8 for '1' to '9', and 9 for '0'.
-	//
-	KEY_SCREEN_SWITCH_OFFSET = 0x82,
 };
 
 static const char scancode_map[128] =
@@ -187,10 +180,6 @@ bool keyboard_has_input()
 
 void keyboard_handle_input()
 {
-	//
-	// The keys typed after the Enter that ends a get_line() line are kept
-	// for after get_line() returns
-	//
 	while (keyboard_has_input())
 	{
 		uint8_t scancode = key_buffer[key_buffer_tail];
