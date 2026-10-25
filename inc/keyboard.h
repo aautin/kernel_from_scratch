@@ -20,8 +20,9 @@ bool keyboard_has_input();
 void keyboard_handle_input();
 
 //
-// Like read(): waits until Enter is pressed, then copies the typed line,
-// ending with '\n', into the buffer. Called by a command, which can print
-// its own prompt before. Returns the number of characters copied.
+// Like read(): starts a pending line read the first time it is called.
+// While Enter is not pressed, it returns 0.
+// After Enter, it copies the typed line (ending with '\n') into the buffer,
+// then returns the number of copied characters.
 //
 uint32_t get_line(char* buffer, uint32_t size);

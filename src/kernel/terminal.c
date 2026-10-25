@@ -330,7 +330,10 @@ void terminal_clear()
 void terminal_switch_screen(uint8_t index)
 {
 	if (index >= TERMINAL_SCREEN_COUNT)
+	{
 		return;
+	}
+
 	state.terminal_index = index;
 
 	if (!current_screen()->initialized)
@@ -346,6 +349,8 @@ void terminal_switch_screen(uint8_t index)
 	//
 	put_screen();
 	vga_put_cursor(current_screen()->cursor_x, y_to_vga(current_screen()->cursor_y));
+
+	return;
 }
 
 void terminal_begin_output()
