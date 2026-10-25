@@ -26,26 +26,122 @@ enum keyboard_special_scancode
 	//
 	KEY_CTRL_PRESSED  = 0x1D,
 	KEY_CTRL_RELEASED = 0x9D,
+
+	//
+	// Hold Shift to write in uppercase
+	//
+	KEY_LEFT_SHIFT_PRESS    = 0x2A,
+	KEY_LEFT_SHIFT_RELEASE  = 0xAA,
+	KEY_RIGHT_SHIFT_PRESS   = 0x36,
+	KEY_RIGHT_SHIFT_RELEASE = 0xB6,
 };
 
-static const char scancode_map[128] =
+#define SCANCODE_MAP_SIZE 128
+static const char maps[2][SCANCODE_MAP_SIZE] =
 {
-	//
-	// 10 elements per row
-	//
-	0, 0, '1', '2', '3', '4', '5', '6', '7', '8',
-	'9', '0', '-', '=', 0, 0, 'q', 'w', 'e', 'r',
-	't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0, 0, 
-	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
-	'\'', '`', 0, '\\', 'z', 'x', 'c', 'v', 'b', 'n',
-	'm', ',', '.', '/', 0, '*', 0, ' ', 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	{
+		//
+		// Qwerty
+		//
+
+		[0x02] = '1', [0x03] = '2', [0x04] = '3',
+		[0x05] = '4', [0x06] = '5', [0x07] = '6',
+		[0x08] = '7', [0x09] = '8', [0x0A] = '9',
+		[0x0B] = '0', [0x0C] = '-', [0x0D] = '=',
+
+		[0x10] = 'q', [0x11] = 'w', [0x12] = 'e',
+		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
+		[0x16] = 'u', [0x17] = 'i', [0x18] = 'o',
+		[0x19] = 'p', [0x1A] = '[', [0x1B] = ']',
+
+		[0x1E] = 'a', [0x1F] = 's', [0x20] = 'd',
+		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
+		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
+		[0x27] = ';', [0x28] = '\'', [0x29] = '`',
+
+		[0x2B] = '\\',
+		[0x2C] = 'z', [0x2D] = 'x', [0x2E] = 'c',
+		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
+		[0x32] = 'm', [0x33] = ',', [0x34] = '.',
+		[0x35] = '/',
+
+		[0x39] = ' ',
+	},
+	{
+		//
+		// Azerty
+		//
+		[0x02] = '&', [0x03] = 0x82, [0x04] = '"', // 0x82 = é
+		[0x05] = '\'', [0x06] = '(', [0x07] = '-',
+		[0x08] = 0x8A, [0x09] = '_', [0x0A] = 0x87, // 0x8A = è, 0x87 = ç
+		[0x0B] = 0x85, [0x0C] = ')', [0x0D] = '=', // 0x85 = à
+
+		[0x10] = 'a', [0x11] = 'z', [0x12] = 'e',
+		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
+		[0x16] = 'u', [0x17] = 'i', [0x18] = 'o',
+		[0x19] = 'p', [0x1A] = '^', [0x1B] = '$',
+
+		[0x1E] = 'q', [0x1F] = 's', [0x20] = 'd',
+		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
+		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
+		[0x27] = 'm', [0x28] = 0x97, [0x29] = 0xFD, // 0x97 = ù, 0xFD = ²
+
+		[0x2B] = '*',
+		[0x2C] = 'w', [0x2D] = 'x', [0x2E] = 'c',
+		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
+		[0x32] = ',', [0x33] = ';', [0x34] = ':',
+		[0x35] = '!',
+
+		[0x39] = ' ', [0x56] = '<',
+	}
 };
 
-static bool is_lock = false;
-static bool is_ctrl = false;
+//
+// Characters written with Shift. Keys without one, like the letters, fall back
+// to toupper
+//
+static const char upper_maps[2][SCANCODE_MAP_SIZE] =
+{
+	{
+		//
+		// Qwerty
+		//
+		[0x02] = '!', [0x03] = '@', [0x04] = '#',
+		[0x05] = '$', [0x06] = '%', [0x07] = '^',
+		[0x08] = '&', [0x09] = '*', [0x0A] = '(',
+		[0x0B] = ')', [0x0C] = '_', [0x0D] = '+',
+
+		[0x1A] = '{', [0x1B] = '}',
+		[0x27] = ':', [0x28] = '"', [0x29] = '~',
+		[0x2B] = '|',
+
+		[0x33] = '<', [0x34] = '>', [0x35] = '?',
+	},
+	{
+		//
+		// Azerty
+		//
+		[0x02] = '1', [0x03] = '2', [0x04] = '3',
+		[0x05] = '4', [0x06] = '5', [0x07] = '6',
+		[0x08] = '7', [0x09] = '8', [0x0A] = '9',
+		[0x0B] = '0', [0x0C] = 0xF8, [0x0D] = '+', // 0xF8 = °
+
+		[0x1B] = 0x9C, // 0x9C = £
+		[0x28] = '%', [0x2B] = 0xE6, // 0xE6 = µ
+
+		[0x32] = '?', [0x33] = '.', [0x34] = '/',
+		[0x35] = 0x15, // 0x15 = §
+
+		[0x56] = '>',
+	},
+};
+
+static bool is_lock  = false;
+static bool is_ctrl  = false;
+static bool is_left_shift = false;
+static bool is_right_shift = false;
+
+static enum keyboard_layout current_layout = KEYBOARD_LAYOUT_QWERTY;
 
 //
 // Scancodes received by the interrupt handler, waiting to be handled by the
@@ -67,24 +163,55 @@ static void execute()
 
 static void handle_scancode(uint32_t scancode)
 {
-	if (scancode == KEY_CTRL_PRESSED)
+	switch (scancode)
 	{
-		is_ctrl = true;
-		return;
+		case KEY_LEFT_SHIFT_PRESS:
+			is_left_shift = true;
+			return;
+
+		case KEY_LEFT_SHIFT_RELEASE:
+			is_left_shift = false;
+			return;
+
+		case KEY_RIGHT_SHIFT_PRESS:
+			is_right_shift = true;
+			return;
+
+		case KEY_RIGHT_SHIFT_RELEASE:
+			is_right_shift = false;
+			return;
+
+		case KEY_CTRL_PRESSED:
+			is_ctrl = true;
+			return;
+
+		case KEY_CTRL_RELEASED:
+			is_ctrl = false;
+			return;
+
+		default:
+			break;
 	}
 
-	if (scancode == KEY_CTRL_RELEASED)
-	{
-		is_ctrl = false;
-		return;
-	}
-
-	if (scancode >= sizeof(scancode_map))
+	if (scancode >= SCANCODE_MAP_SIZE)
 	{
 		//
 		// The scancode is out of bounds
 		//
 		return;
+	}
+
+	uint8_t c = maps[current_layout][scancode];
+	if (is_lock ^ (is_left_shift || is_right_shift))
+	{
+		if (upper_maps[current_layout][scancode])
+		{
+			c = upper_maps[current_layout][scancode];
+		}
+		else
+		{
+			c = toupper(c);
+		}
 	}
 
 	if (is_ctrl)
@@ -93,27 +220,19 @@ static void handle_scancode(uint32_t scancode)
 		// Ctrl + digit switches screen in the keyboard row order: '1' is the
 		// first screen (index 0) and '0' the last one (index 9)
 		//
-		if (!is_reading() && isdigit(scancode_map[scancode]))
+		if (!is_reading() && isdigit(c))
 		{
-			terminal_switch_screen((scancode_map[scancode] - '1' + 10) % 10);
+			terminal_switch_screen((c - '1' + 10) % 10);
 		}
 
 		return;
 	}
 
-	if (scancode_map[scancode])
+	if (c)
 	{
-		
-
 		//
 		// The character is printable
 		//
-
-		uint8_t c = scancode_map[scancode];
-		if (is_lock)
-		{
-			c = toupper(c);
-		}
 
 		terminal_putc_input(c);
 		return;
@@ -154,6 +273,11 @@ static void handle_scancode(uint32_t scancode)
 			//
 			break;
 	}
+}
+
+void keyboard_set_layout(enum keyboard_layout new_layout)
+{
+	current_layout = new_layout;
 }
 
 void keyboard_interrupt_handler(interrupt_frame_t* frame)
