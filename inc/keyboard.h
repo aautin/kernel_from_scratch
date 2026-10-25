@@ -18,11 +18,3 @@ void keyboard_push_scancode(uint8_t scancode);
 //
 bool keyboard_has_input();
 void keyboard_handle_input();
-
-//
-// Like read(): starts a pending line read the first time it is called.
-// While Enter is not pressed, it returns 0.
-// After Enter, it copies the typed line (ending with '\n') into the buffer,
-// then returns the number of copied characters.
-//
-uint32_t get_line(char* buffer, uint32_t size);
