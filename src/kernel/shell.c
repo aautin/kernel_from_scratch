@@ -10,7 +10,7 @@
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256
-#define COMMAND_COUNT                  8
+#define COMMAND_COUNT                  10
 
 #define PS2_CONTROLLER_STATUS_PORT     0x64
 #define PS2_INPUT_BUFFER_FULL          0x02
@@ -30,6 +30,7 @@ struct shell
 	multiboot_info_t* mbi;
 	shell_command_t   commands[COMMAND_COUNT];
 	shell_command_t*  last_command;
+	bool              read_pending;
 };
 typedef struct shell shell_t;
 
@@ -79,11 +80,10 @@ static void pstack(void)
 
 static void read()
 {
-	char line[256];
+	if (shell.read_pending)
+		return;
 
-	printk("input: ");
-	get_line(line, sizeof(line));
-	printk("output: %s", line);
+	shell.read_pending = true;
 }
 
 static void halt()
@@ -121,6 +121,16 @@ static void reboot()
 	outb(PS2_CONTROLLER_STATUS_PORT, PS2_REBOOT_COMMAND);
 }
 
+static void azerty()
+{
+	keyboard_set_layout(KEYBOARD_LAYOUT_AZERTY);
+}
+
+static void qwerty()
+{
+	keyboard_set_layout(KEYBOARD_LAYOUT_QWERTY);
+}
+
 static void add_shell_cmd(uint8_t index, const char* name,
 	const char* desc, void (*command)())
 {
@@ -138,20 +148,32 @@ void shell_init(multiboot_info_t* mbi)
 {
 	shell.mbi          = mbi;
 	shell.last_command = 0;
+	shell.read_pending = false;
 
-	add_shell_cmd(0, "help",       "Display the commands list", &help);
-	add_shell_cmd(1, "clear",      "Clear the terminal screen", &clear);
-	add_shell_cmd(2, "last",       "Execute the last command",  &last);
-	add_shell_cmd(3, "pmultiboot", "Print multiboot infos",     &pmultiboot);
-	add_shell_cmd(4, "pstack",     "Print the kernel stack",    &pstack);
-	add_shell_cmd(5, "reboot",     "Reboot the system",         &reboot);
-	add_shell_cmd(6, "halt",       "Halt the system",           &halt);
-	add_shell_cmd(7, "read",       "Read a line and print it",  &read);
+	add_shell_cmd(0, "help",       "Display the commands list",             &help);
+	add_shell_cmd(1, "clear",      "Clear the terminal screen",             &clear);
+	add_shell_cmd(2, "last",       "Execute the last command",              &last);
+	add_shell_cmd(3, "pmultiboot", "Print multiboot infos",                 &pmultiboot);
+	add_shell_cmd(4, "pstack",     "Print the kernel stack",                &pstack);
+	add_shell_cmd(5, "reboot",     "Reboot the system",                     &reboot);
+	add_shell_cmd(6, "halt",       "Halt the system",                       &halt);
+	add_shell_cmd(7, "read",       "Read a line and print it",              &read);
+	add_shell_cmd(8, "azerty",     "Switch to the Azerty keyboard layout",  &azerty);
+	add_shell_cmd(9, "qwerty",     "Switch to the Qwerty keyboard layout",  &qwerty);
 }
 
 bool shell_execute(const char* command)
 {
-	
+	if (shell.read_pending)
+	{
+		terminal_begin_output();
+		printk("read: \"%s\"", command);
+		terminal_end_output(true);
+
+		shell.read_pending = false;
+		return true;
+	}
+
 	for (int i = 0; i < COMMAND_COUNT; i++)
 	{
 		if (strcmp(command, shell.commands[i].name) == 0)
@@ -165,7 +187,10 @@ bool shell_execute(const char* command)
 				shell.last_command = &shell.commands[i];
 			}
 			
-			terminal_end_output();
+			//
+			// No prompt while the read command waits for its line
+			//
+			terminal_end_output(!shell.read_pending);
 			return true;
 		}
 	}
@@ -173,7 +198,12 @@ bool shell_execute(const char* command)
 	terminal_begin_output();
 	if (command[0] != '\0')
 		printk("%s: command not found\n", command);
-	terminal_end_output();
+	terminal_end_output(true);
 
 	return false;
+}
+
+bool is_reading()
+{
+	return shell.read_pending;
 }

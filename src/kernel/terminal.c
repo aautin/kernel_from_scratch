@@ -11,7 +11,7 @@
 enum terminal
 {
 	TERMINAL_SCREEN_COUNT = 10,
-	TERMINAL_EXTRA_LINES  = 200 - VGA_HEIGHT, // 200 lines of scrollback per screen
+	TERMINAL_EXTRA_LINES  = 35 - VGA_HEIGHT, // 200 lines of scrollback per screen
 	TERMINAL_WIDTH        = VGA_WIDTH,
 	TERMINAL_HEIGHT       = VGA_HEIGHT + TERMINAL_EXTRA_LINES,
 };
@@ -330,7 +330,10 @@ void terminal_clear()
 void terminal_switch_screen(uint8_t index)
 {
 	if (index >= TERMINAL_SCREEN_COUNT)
+	{
 		return;
+	}
+
 	state.terminal_index = index;
 
 	if (!current_screen()->initialized)
@@ -346,6 +349,8 @@ void terminal_switch_screen(uint8_t index)
 	//
 	put_screen();
 	vga_put_cursor(current_screen()->cursor_x, y_to_vga(current_screen()->cursor_y));
+
+	return;
 }
 
 void terminal_begin_output()
@@ -364,14 +369,17 @@ void terminal_begin_output()
 	vga_set_cursor_visibility(false);
 }
 
-void terminal_end_output()
+void terminal_end_output(bool show_prompt)
 {
 	screen_t* screen = current_screen();
 	if (screen->cursor_x != 0)
 	{
 		putc('\n');
 	}
-	put_prompt();
+	if (show_prompt)
+	{
+		put_prompt();
+	}
 	screen->input_size = 0;
 	screen->input_cursor = 0;
 	vga_set_cursor_visibility(true);
@@ -419,27 +427,6 @@ void terminal_puts_output(const char* message)
 	{
 		putc(message[index]);
 	}
-}
-
-void terminal_begin_input()
-{
-	screen_t* screen = current_screen();
-	screen->input_size   = 0;
-	screen->input_cursor = 0;
-	vga_set_cursor_visibility(true);
-}
-
-void terminal_end_input()
-{
-	screen_t* screen = current_screen();
-
-	//
-	// The new line goes after the whole input, not at the cursor
-	//
-	move_cursor(screen->input_size - screen->input_cursor);
-	putc('\n');
-	screen->input_size = -1;
-	vga_set_cursor_visibility(false);
 }
 
 void terminal_putc_input(char input)

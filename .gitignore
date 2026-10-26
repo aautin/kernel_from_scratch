@@ -1,5 +1,5 @@
 .vscode/
-
 *.elf
 *.o
 obj/
+kernel.map

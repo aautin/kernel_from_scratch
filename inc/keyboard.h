@@ -5,6 +5,11 @@
 
 #include "interrupt.h"
 
+enum keyboard_layout {
+    KEYBOARD_LAYOUT_QWERTY,
+    KEYBOARD_LAYOUT_AZERTY
+};
+
 void keyboard_interrupt_handler(interrupt_frame_t* frame);
 
 //
@@ -18,10 +23,4 @@ void keyboard_push_scancode(uint8_t scancode);
 //
 bool keyboard_has_input();
 void keyboard_handle_input();
-
-//
-// Like read(): waits until Enter is pressed, then copies the typed line,
-// ending with '\n', into the buffer. Called by a command, which can print
-// its own prompt before. Returns the number of characters copied.
-//
-uint32_t get_line(char* buffer, uint32_t size);
+void keyboard_set_layout(enum keyboard_layout new_layout);

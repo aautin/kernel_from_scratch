@@ -7,7 +7,6 @@
 #include "keyboard.h"
 
 #define KEYBOARD_DATA_PORT 0x60
-#define KEY_RELEASED_MASK 0x80
 #define KEY_BUFFER_SIZE   128
 
 enum keyboard_special_scancode
@@ -29,30 +28,120 @@ enum keyboard_special_scancode
 	KEY_CTRL_RELEASED = 0x9D,
 
 	//
-	// Released digit scancodes are 0x82 ('1') to 0x8B ('0'), so subtracting
-	// this offset gives the screens 0 to 8 for '1' to '9', and 9 for '0'.
+	// Hold Shift to write in uppercase
 	//
-	KEY_SCREEN_SWITCH_OFFSET = 0x82,
+	KEY_LEFT_SHIFT_PRESS    = 0x2A,
+	KEY_LEFT_SHIFT_RELEASE  = 0xAA,
+	KEY_RIGHT_SHIFT_PRESS   = 0x36,
+	KEY_RIGHT_SHIFT_RELEASE = 0xB6,
 };
 
-static const char scancode_map[128] =
+#define SCANCODE_MAP_SIZE 128
+static const char maps[2][SCANCODE_MAP_SIZE] =
 {
-	//
-	// 10 elements per row
-	//
-	0, 0, '1', '2', '3', '4', '5', '6', '7', '8',
-	'9', '0', '-', '=', 0, 0, 'q', 'w', 'e', 'r',
-	't', 'y', 'u', 'i', 'o', 'p', '[', ']', 0, 0, 
-	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',
-	'\'', '`', 0, '\\', 'z', 'x', 'c', 'v', 'b', 'n',
-	'm', ',', '.', '/', 0, '*', 0, ' ', 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	{
+		//
+		// Qwerty
+		//
+
+		[0x02] = '1', [0x03] = '2', [0x04] = '3',
+		[0x05] = '4', [0x06] = '5', [0x07] = '6',
+		[0x08] = '7', [0x09] = '8', [0x0A] = '9',
+		[0x0B] = '0', [0x0C] = '-', [0x0D] = '=',
+
+		[0x10] = 'q', [0x11] = 'w', [0x12] = 'e',
+		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
+		[0x16] = 'u', [0x17] = 'i', [0x18] = 'o',
+		[0x19] = 'p', [0x1A] = '[', [0x1B] = ']',
+
+		[0x1E] = 'a', [0x1F] = 's', [0x20] = 'd',
+		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
+		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
+		[0x27] = ';', [0x28] = '\'', [0x29] = '`',
+
+		[0x2B] = '\\',
+		[0x2C] = 'z', [0x2D] = 'x', [0x2E] = 'c',
+		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
+		[0x32] = 'm', [0x33] = ',', [0x34] = '.',
+		[0x35] = '/',
+
+		[0x39] = ' ',
+	},
+	{
+		//
+		// Azerty
+		//
+		[0x02] = '&', [0x03] = 0x82, [0x04] = '"', // 0x82 = é
+		[0x05] = '\'', [0x06] = '(', [0x07] = '-',
+		[0x08] = 0x8A, [0x09] = '_', [0x0A] = 0x87, // 0x8A = è, 0x87 = ç
+		[0x0B] = 0x85, [0x0C] = ')', [0x0D] = '=', // 0x85 = à
+
+		[0x10] = 'a', [0x11] = 'z', [0x12] = 'e',
+		[0x13] = 'r', [0x14] = 't', [0x15] = 'y',
+		[0x16] = 'u', [0x17] = 'i', [0x18] = 'o',
+		[0x19] = 'p', [0x1A] = '^', [0x1B] = '$',
+
+		[0x1E] = 'q', [0x1F] = 's', [0x20] = 'd',
+		[0x21] = 'f', [0x22] = 'g', [0x23] = 'h',
+		[0x24] = 'j', [0x25] = 'k', [0x26] = 'l',
+		[0x27] = 'm', [0x28] = 0x97, [0x29] = 0xFD, // 0x97 = ù, 0xFD = ²
+
+		[0x2B] = '*',
+		[0x2C] = 'w', [0x2D] = 'x', [0x2E] = 'c',
+		[0x2F] = 'v', [0x30] = 'b', [0x31] = 'n',
+		[0x32] = ',', [0x33] = ';', [0x34] = ':',
+		[0x35] = '!',
+
+		[0x39] = ' ', [0x56] = '<',
+	}
 };
 
-static bool is_lock = false;
-static bool is_ctrl = false;
+//
+// Characters written with Shift. Keys without one, like the letters, fall back
+// to toupper
+//
+static const char upper_maps[2][SCANCODE_MAP_SIZE] =
+{
+	{
+		//
+		// Qwerty
+		//
+		[0x02] = '!', [0x03] = '@', [0x04] = '#',
+		[0x05] = '$', [0x06] = '%', [0x07] = '^',
+		[0x08] = '&', [0x09] = '*', [0x0A] = '(',
+		[0x0B] = ')', [0x0C] = '_', [0x0D] = '+',
+
+		[0x1A] = '{', [0x1B] = '}',
+		[0x27] = ':', [0x28] = '"', [0x29] = '~',
+		[0x2B] = '|',
+
+		[0x33] = '<', [0x34] = '>', [0x35] = '?',
+	},
+	{
+		//
+		// Azerty
+		//
+		[0x02] = '1', [0x03] = '2', [0x04] = '3',
+		[0x05] = '4', [0x06] = '5', [0x07] = '6',
+		[0x08] = '7', [0x09] = '8', [0x0A] = '9',
+		[0x0B] = '0', [0x0C] = 0xF8, [0x0D] = '+', // 0xF8 = °
+
+		[0x1B] = 0x9C, // 0x9C = £
+		[0x28] = '%', [0x2B] = 0xE6, // 0xE6 = µ
+
+		[0x32] = '?', [0x33] = '.', [0x34] = '/',
+		[0x35] = 0x15, // 0x15 = §
+
+		[0x56] = '>',
+	},
+};
+
+static bool is_lock  = false;
+static bool is_ctrl  = false;
+static bool is_left_shift = false;
+static bool is_right_shift = false;
+
+static enum keyboard_layout current_layout = KEYBOARD_LAYOUT_QWERTY;
 
 //
 // Scancodes received by the interrupt handler, waiting to be handled by the
@@ -62,13 +151,6 @@ static bool is_ctrl = false;
 static volatile uint8_t  key_buffer[KEY_BUFFER_SIZE];
 static volatile uint32_t key_buffer_head = 0;
 static volatile uint32_t key_buffer_tail = 0;
-
-//
-// Set by get_line() while it waits for a line: Enter then ends the line
-// instead of executing it as a command.
-//
-static bool line_requested = false;
-static bool line_done      = false;
 
 static void execute()
 {
@@ -81,29 +163,37 @@ static void execute()
 
 static void handle_scancode(uint32_t scancode)
 {
-	if (scancode == KEY_CTRL_PRESSED)
+	switch (scancode)
 	{
-		is_ctrl = true;
-		return;
-	}
+		case KEY_LEFT_SHIFT_PRESS:
+			is_left_shift = true;
+			return;
 
-	if (scancode & KEY_RELEASED_MASK)
-	{
-		if (scancode == KEY_CTRL_RELEASED)
+		case KEY_LEFT_SHIFT_RELEASE:
+			is_left_shift = false;
+			return;
+
+		case KEY_RIGHT_SHIFT_PRESS:
+			is_right_shift = true;
+			return;
+
+		case KEY_RIGHT_SHIFT_RELEASE:
+			is_right_shift = false;
+			return;
+
+		case KEY_CTRL_PRESSED:
+			is_ctrl = true;
+			return;
+
+		case KEY_CTRL_RELEASED:
 			is_ctrl = false;
-		else if (is_ctrl && !line_requested)
-		{
-			//
-			// Any released key that is not a digit gives an index above 9,
-			// which terminal_switch_screen() ignores.
-			// The screen doesn't change while get_line() waits for a line on it.
-			//
-			terminal_switch_screen((uint8_t) (scancode - KEY_SCREEN_SWITCH_OFFSET));
-		}
-		return;
+			return;
+
+		default:
+			break;
 	}
 
-	if (scancode >= sizeof(scancode_map))
+	if (scancode >= SCANCODE_MAP_SIZE)
 	{
 		//
 		// The scancode is out of bounds
@@ -111,35 +201,40 @@ static void handle_scancode(uint32_t scancode)
 		return;
 	}
 
-	if (scancode_map[scancode])
+	uint8_t c = maps[current_layout][scancode];
+	if (is_lock ^ (is_left_shift || is_right_shift))
+	{
+		if (upper_maps[current_layout][scancode])
+		{
+			c = upper_maps[current_layout][scancode];
+		}
+		else
+		{
+			c = toupper(c);
+		}
+	}
+
+	if (is_ctrl)
+	{
+		//
+		// Ctrl + digit switches screen in the keyboard row order: '1' is the
+		// first screen (index 0) and '0' the last one (index 9)
+		//
+		if (!is_reading() && isdigit(c))
+		{
+			terminal_switch_screen((c - '1' + 10) % 10);
+		}
+
+		return;
+	}
+
+	if (c)
 	{
 		//
 		// The character is printable
 		//
 
-		if (is_ctrl)
-		{
-			//
-			// Ctrl + digit switches screen, so don't type the character
-			//
-			return;
-		}
-
-		uint8_t c = scancode_map[scancode];
-		if (is_lock)
-		{
-			c = toupper(c);
-		}
-
 		terminal_putc_input(c);
-		return;
-	}
-	
-	if (is_ctrl && (scancode == KEY_ENTER || scancode == KEY_BACKSPACE))
-	{
-		//
-		// Ctrl is only a modifier, so it blocks Enter and Backspace too
-		//
 		return;
 	}
 
@@ -149,10 +244,7 @@ static void handle_scancode(uint32_t scancode)
 		// Special keys handling
 		//
 		case KEY_ENTER:
-			if (line_requested)
-				line_done = true;
-			else
-				execute();
+			execute();
 			break;
 		case KEY_BACKSPACE:
 			terminal_del_input(1);
@@ -183,6 +275,11 @@ static void handle_scancode(uint32_t scancode)
 	}
 }
 
+void keyboard_set_layout(enum keyboard_layout new_layout)
+{
+	current_layout = new_layout;
+}
+
 void keyboard_interrupt_handler(interrupt_frame_t* frame)
 {
 	(void) frame;
@@ -211,62 +308,11 @@ bool keyboard_has_input()
 
 void keyboard_handle_input()
 {
-	//
-	// The keys typed after the Enter that ends a get_line() line are kept
-	// for after get_line() returns
-	//
-	while (keyboard_has_input() && !line_done)
+	while (keyboard_has_input())
 	{
 		uint8_t scancode = key_buffer[key_buffer_tail];
 		key_buffer_tail = (key_buffer_tail + 1) % KEY_BUFFER_SIZE;
 
 		handle_scancode(scancode);
 	}
-}
-
-uint32_t get_line(char* buffer, uint32_t size)
-{
-	if (size == 0)
-		return 0;
-
-	terminal_begin_input();
-	line_requested = true;
-
-	while (!line_done)
-	{
-		keyboard_handle_input();
-
-		//
-		// Same wait as in kernel_main(): interrupts are disabled while
-		// checking the key buffer, so a key can't arrive between the check
-		// and 'hlt'
-		//
-		__asm__ volatile ("cli");
-		if (!line_done && !keyboard_has_input())
-			__asm__ volatile ("sti; hlt");
-		__asm__ volatile ("sti");
-	}
-
-	char line[256] = {0};
-	terminal_get_input(line, sizeof(line));
-	terminal_end_input();
-
-	line_requested = false;
-	line_done      = false;
-
-	//
-	// Like read(), the line ends with '\n'. It is cut if the buffer is too
-	// small, and always ends with '\0'.
-	//
-	uint32_t length = 0;
-	while (line[length] && length < size - 1)
-	{
-		buffer[length] = line[length];
-		length++;
-	}
-	if (length < size - 1)
-		buffer[length++] = '\n';
-	buffer[length] = '\0';
-
-	return length;
 }
