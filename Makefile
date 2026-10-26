@@ -7,7 +7,7 @@ LD       := ld
 CDEFAULTFLAGS := -Wall -Wextra -Werror
 CFLAGS        := $(CDEFAULTFLAGS) -ffreestanding -fno-builtin -nostdlib -nodefaultlibs -fno-stack-protector -fno-pie -fno-pic -m32 -g
 ASFLAGS       := -f elf32
-LDFLAGS       := -m elf_i386 -nostdlib
+LDFLAGS       := -m elf_i386 -nostdlib -Map=kernel.map
 
 INC_PATH := inc inc/helper inc/io
 SRC_PATH := src
@@ -28,6 +28,8 @@ C_SRC_FILES  := kernel/boot/main \
 				\
 				kernel/io/vga \
 				kernel/io/port \
+				\
+				kernel/sections/bss \
 				\
 				kernel/terminal \
 				kernel/shell \

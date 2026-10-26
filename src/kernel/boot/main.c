@@ -8,7 +8,7 @@
 #include "mouse.h"
 #include "interrupt.h"
 
-extern void     register_gdt();
+extern void register_gdt();
 
 static void hang()
 {
@@ -35,7 +35,7 @@ void kernel_main(multiboot_info_t* mbi)
 	interrupt_register(INTERRUPT_VECTOR_KEYBOARD, keyboard_interrupt_handler);
 	interrupt_register(INTERRUPT_VECTOR_MOUSE, mouse_interrupt_handler);
 	mouse_init();
-	register_interrupt_descriptor_table();
+	register_interrupt_descriptor_table();	
 
 	//
 	// Enable interrupts
