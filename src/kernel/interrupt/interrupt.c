@@ -8,13 +8,18 @@
 #define IDT_SIZE      256
 #define PIC_IRQ_COUNT 16
 #define PIC_EOI       0x20
+#define EXCEPTION_COUNT 20
 
+extern uint32_t exception_stub_table[EXCEPTION_COUNT];
 extern uint32_t irq_stub_table[PIC_IRQ_COUNT];
 
 static interrupt_handler_t handlers[IDT_SIZE];
 
 void interrupt_init()
 {
+	for (uint32_t vector = 0; vector < EXCEPTION_COUNT; vector++)
+		set_interrupt_descriptor((enum interrupt_vector_index) vector, exception_stub_table[vector]);
+
 	for (uint32_t irq = 0; irq < PIC_IRQ_COUNT; irq++)
 		set_interrupt_descriptor((enum interrupt_vector_index) (PIC_OFFSET + irq), irq_stub_table[irq]);
 }
@@ -28,6 +33,13 @@ void interrupt_dispatch(interrupt_frame_t* frame)
 {
 	if (handlers[frame->vector])
 		handlers[frame->vector](frame);
+
+	//
+	// Only IRQs are acknowledged to the PIC: CPU exceptions and
+	// software interrupts don't come from it.
+	//
+	if (frame->vector < PIC_OFFSET || frame->vector >= PIC_OFFSET + PIC_IRQ_COUNT)
+		return;
 
 	//
 	// The slave PIC is behind the master one, so its IRQs are acknowledged

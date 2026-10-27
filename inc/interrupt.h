@@ -6,7 +6,8 @@
 // What the stack holds when the dispatcher is called, from the last value
 // pushed to the first one:
 // - the registers saved by 'pusha' in irq_stub.asm,
-// - the vector number and the error code pushed by the IRQ stub,
+// - the vector number and the error code pushed by the stub (for some
+//   exceptions, the error code is pushed by the CPU instead),
 // - the values pushed by the CPU itself before calling the stub.
 //
 struct interrupt_frame
@@ -32,8 +33,8 @@ typedef struct interrupt_frame interrupt_frame_t;
 typedef void (*interrupt_handler_t)(interrupt_frame_t* frame);
 
 //
-// Point the IDT entries of the 16 IRQs to their stubs, which all call
-// interrupt_dispatch().
+// Point the IDT entries of the 20 CPU exceptions and the 16 IRQs to their
+// stubs, which all call interrupt_dispatch().
 //
 void interrupt_init();
 
@@ -43,7 +44,7 @@ void interrupt_init();
 void interrupt_register(uint8_t vector, interrupt_handler_t handler);
 
 //
-// Called by the IRQ stubs: calls the registered handler, then acknowledges
-// the interrupt to the PIC.
+// Called by the interrupt stubs: calls the registered handler, then
+// acknowledges the interrupt to the PIC if it is an IRQ.
 //
 void interrupt_dispatch(interrupt_frame_t* frame);

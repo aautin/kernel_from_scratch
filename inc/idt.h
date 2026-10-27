@@ -4,8 +4,35 @@
 
 enum interrupt_vector_index
 {
-    INTERRUPT_VECTOR_KEYBOARD = 0x21,
-    INTERRUPT_VECTOR_MOUSE    = 0x2C,
+    //
+    // CPU exceptions (vectors 0x00-0x1F)
+    //
+    INTERRUPT_VECTOR_DIVISION_BY_ZERO              = 0x00,
+    INTERRUPT_VECTOR_DEBUGGER                      = 0x01,
+    INTERRUPT_VECTOR_NMI                           = 0x02,
+    INTERRUPT_VECTOR_BREAKPOINT                    = 0x03,
+    INTERRUPT_VECTOR_OVERFLOW                      = 0x04,
+    INTERRUPT_VECTOR_BOUNDS                        = 0x05,
+    INTERRUPT_VECTOR_INVALID_OPCODE                = 0x06,
+    INTERRUPT_VECTOR_COPROCESSOR_NOT_AVAILABLE     = 0x07,
+    INTERRUPT_VECTOR_DOUBLE_FAULT                  = 0x08, // Error code (always 0)
+    INTERRUPT_VECTOR_COPROCESSOR_SEGMENT_OVERRUN   = 0x09, // 386 or earlier only
+    INTERRUPT_VECTOR_INVALID_TASK_STATE_SEGMENT    = 0x0A, // Error code
+    INTERRUPT_VECTOR_SEGMENT_NOT_PRESENT           = 0x0B, // Error code
+    INTERRUPT_VECTOR_STACK_FAULT                   = 0x0C, // Error code
+    INTERRUPT_VECTOR_GENERAL_PROTECTION_FAULT      = 0x0D, // Error code
+    INTERRUPT_VECTOR_PAGE_FAULT                    = 0x0E, // Error code
+    INTERRUPT_VECTOR_RESERVED                      = 0x0F, // Never raised by the CPU
+    INTERRUPT_VECTOR_MATH_FAULT                    = 0x10,
+    INTERRUPT_VECTOR_ALIGNMENT_CHECK               = 0x11, // Error code
+    INTERRUPT_VECTOR_MACHINE_CHECK                 = 0x12,
+    INTERRUPT_VECTOR_SIMD_FLOATING_POINT_EXCEPTION = 0x13,
+
+    //
+    // IRQs (vectors 0x20-0x2F)
+    //
+    INTERRUPT_VECTOR_KEYBOARD = 0x21, // IRQ1
+    INTERRUPT_VECTOR_MOUSE    = 0x2C, // IRQ12
 };
 
 enum interrupt_descriptor_flag
