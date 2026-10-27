@@ -35,6 +35,8 @@ section .text
 	IRQ_STUB 14
 	IRQ_STUB 15
 
+	; Shared by the IRQ stubs and the exception stubs (exception_stub.asm).
+	global interrupt_common_stub
 	interrupt_common_stub:
 		; Push the registers on the stack to save their state.
 		pusha

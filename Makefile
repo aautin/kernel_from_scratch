@@ -47,7 +47,8 @@ AS_SRC_FILES := kernel/boot/entry \
 				kernel/sections/multiboot \
 				kernel/sections/gdt \
 				\
-				kernel/interrupt/handler/irq_stub
+				kernel/interrupt/handler/irq_stub \
+				kernel/interrupt/handler/exception_stub
 
 AS_SRC       := $(addsuffix .asm, $(addprefix $(SRC_PATH)/, $(AS_SRC_FILES)))
 
