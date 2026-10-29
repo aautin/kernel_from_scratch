@@ -34,6 +34,8 @@ C_SRC_FILES  := kernel/boot/main \
 				kernel/terminal \
 				kernel/shell \
 				kernel/stack \
+				kernel/panic \
+				kernel/cpu \
 				\
 				kernel/helper/char \
 				kernel/helper/printk \

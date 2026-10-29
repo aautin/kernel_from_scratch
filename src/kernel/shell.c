@@ -7,6 +7,7 @@
 #include "string.h"
 #include "stack.h"
 #include "keyboard.h"
+#include "cpu.h"
 
 #define COMMAND_NAME_MAX_LENGTH        256
 #define COMMAND_DESCRIPTION_MAX_LENGTH 256
@@ -89,24 +90,7 @@ static void read()
 static void halt()
 {
 	printk("System halted.\n");
-
-	//
-	// Clear the general purpose registers,
-	// then halt again after any non-maskable interrupt wakes the CPU
-	//
-	__asm__ volatile (
-		"xor %eax, %eax\n"
-		"xor %ebx, %ebx\n"
-		"xor %ecx, %ecx\n"
-		"xor %edx, %edx\n"
-		"xor %esi, %esi\n"
-		"xor %edi, %edi\n"
-		"xor %ebp, %ebp\n"
-		"1:\n"
-		"cli\n"
-		"hlt\n"
-		"jmp 1b\n"
-	);
+	cpu_halt();
 }
 
 static void reboot()
