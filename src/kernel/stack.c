@@ -4,6 +4,7 @@
 #include "stack.h"
 #include "printk.h"
 #include "char.h"
+#include "mem.h"
 
 #define STACK_DUMP_BYTES     256
 #define STACK_DUMP_WORDS     16
@@ -11,6 +12,7 @@
 #define STACK_STRING_MIN_LEN 4
 
 extern uint32_t stack_top;
+extern uint32_t stack_bottom;
 
 //
 // Defined by the linker script: the bounds of the kernel code.
@@ -94,17 +96,29 @@ static void print_bytes(uint32_t esp, uint32_t ebp, uint32_t stack_base)
 	}
 }
 
-static void print_words(uint32_t esp, uint32_t ebp, uint32_t stack_base)
+uint32_t stack_copy(uint32_t esp, uint32_t* buffer, uint32_t count)
+{
+	uint32_t stack_base = (uint32_t) &stack_top;
+
+	if (esp < (uint32_t) &stack_bottom || esp >= stack_base)
+		return 0;
+
+	if (count > (stack_base - esp) / sizeof(uint32_t))
+		count = (stack_base - esp) / sizeof(uint32_t);
+	memcpy(buffer, (const void*) esp, count * sizeof(uint32_t));
+	return count;
+}
+
+void stack_dump_words(const uint32_t* words, uint32_t count, uint32_t esp, uint32_t ebp)
 {
 	printk("\n=== Word View (for stack frames) ===\n");
 	printk("Addr       Value        Notes\n");
 	printk("---------- -----------  --------------------\n");
 
-	const uint32_t* word = (const uint32_t*) esp;
-	for (uint32_t i = 0; i < STACK_DUMP_WORDS && (uint32_t) word < stack_base; i++, word++)
+	for (uint32_t i = 0; i < count; i++)
 	{
-		uint32_t address = (uint32_t) word;
-		uint32_t value   = *word;
+		uint32_t address = esp + i * sizeof(uint32_t);
+		uint32_t value   = words[i];
 
 		char ascii[5];
 		for (uint32_t j = 0; j < 4; j++)
@@ -139,5 +153,9 @@ void stack_dump(uint32_t esp, uint32_t ebp)
 
 	print_return_addresses(esp, stack_base);
 	print_bytes(esp, ebp, stack_base);
-	print_words(esp, ebp, stack_base);
+
+	uint32_t word_count = (stack_base - esp) / sizeof(uint32_t);
+	if (word_count > STACK_DUMP_WORDS)
+		word_count = STACK_DUMP_WORDS;
+	stack_dump_words((const uint32_t*) esp, word_count, esp, ebp);
 }
