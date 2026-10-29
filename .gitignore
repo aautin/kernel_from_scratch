@@ -1,7 +1,5 @@
 .vscode/
-
 *.elf
 *.o
-iso/
 obj/
 kernel.map
