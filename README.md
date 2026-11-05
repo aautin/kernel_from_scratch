@@ -85,6 +85,8 @@ After `make run`, GRUB loads `kfs.elf` and the screen shows the `$ ` prompt. Com
 | `reboot` | Ask the PS/2 controller to reboot the machine |
 | `halt` | Clear the registers and stop the CPU (`cli; hlt`) |
 | `read` | Arm a one-line read, then print that next entered line |
+| `azerty` / `qwerty` | Switch the keyboard layout |
+| `signal` | Test the signal facility: immediate and scheduled delivery, invalid numbers and queue overflow |
 
 Keyboard controls:
 
@@ -132,7 +134,7 @@ The Interrupt Descriptor Table (IDT) has 256 entries, but this version installs 
 
 ```text
 CPU exceptions     0x00 - 0x1F
-Master PIC IRQs    0x20 - 0x27   (IRQ1 keyboard = 0x21)
+Master PIC IRQs    0x20 - 0x27   (IRQ0 timer = 0x20, IRQ1 keyboard = 0x21)
 Slave PIC IRQs     0x28 - 0x2F   (IRQ12 mouse = 0x2C)
 ```
 
@@ -144,6 +146,22 @@ The kernel is now ready to receive keyboard input asynchronously, without pollin
 - The kernel can add more interrupt handlers and still be effectively responsive to every event
 - The CPU exception can be handled in the same way as hardware interrupts
 - The PIC and CPU are used for their intended purpose
+
+### Timer and signals
+
+The Programmable Interval Timer (PIT) channel 0 raises IRQ0 100 times per second (`TIMER_FREQUENCY` in `timer.h`); its handler only counts ticks. The tick counter gives the time base of the signals.
+
+`signal.h` provides a small signal facility, numbered from 1 to 31:
+
+| Function | Behavior |
+| --- | --- |
+| `signal_register(number, function)` | Set the callback of a signal; a null function unregisters it |
+| `signal_raise(number)` | Call the callback now. From an interrupt handler or from a callback, the signal is queued instead |
+| `signal_schedule(number, delay_ms)` | Queue the signal, delivered by the main loop once the delay has passed (rounded up to the 10 ms tick) |
+
+Every function returns a `signal_status_t`: an invalid number, an unregistered signal or a full queue is reported and nothing else happens. The queue holds 32 signals; a signal scheduled when it is full is dropped and counted (`signal_dropped_count`).
+
+The main loop calls `signal_handle_pending`, which delivers the due signals in the order of their due time, then in the order they were scheduled. Callbacks therefore never run inside an interrupt: they run with interrupts enabled and can't alter the state restored by `iretd`. Only the signals queued before the call are delivered, so a callback scheduling itself again waits for the next loop iteration.
 
 ### Keyboard, terminal, and shell flow
 
@@ -188,5 +206,5 @@ We identified the following areas for future work that anyone is welcome to cont
 - Paging and a general physical/virtual memory allocator.
 - User mode, processes, threads, scheduling, and system calls.
 - CPU exception handlers beyond the default hardware behavior.
-- Timers, disks, filesystems, networking, USB, and modern display output.
+- Disks, filesystems, networking, USB, and modern display output.
 - A libc, command parsing with arguments, or persistent storage.

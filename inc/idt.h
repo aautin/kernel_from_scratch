@@ -31,6 +31,7 @@ enum interrupt_vector_index
     //
     // IRQs (vectors 0x20-0x2F)
     //
+    INTERRUPT_VECTOR_TIMER    = 0x20, // IRQ0
     INTERRUPT_VECTOR_KEYBOARD = 0x21, // IRQ1
     INTERRUPT_VECTOR_MOUSE    = 0x2C, // IRQ12
 };
