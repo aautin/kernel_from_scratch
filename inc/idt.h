@@ -33,6 +33,7 @@ enum interrupt_vector_index
     //
     INTERRUPT_VECTOR_KEYBOARD = 0x21, // IRQ1
     INTERRUPT_VECTOR_MOUSE    = 0x2C, // IRQ12
+    INTERRUPT_VECTOR_SYSCALL  = 0x80, // SYSCALL
 };
 
 enum interrupt_descriptor_flag
@@ -66,8 +67,8 @@ enum interrupt_descriptor_flag
 
     //
     // Privilege level:
-    // - Ring 0 is the most privileged (kernel mode)
-    // - Ring 3 is the least privileged (user applications)
+    // - DPL0, kernel mode       : only DPL0 segments are allowed to call the interrupt gate
+    // - DPL3, user applications : DPL3 segments, or less, are allowed to call the interrupt gate
     //
     INTERRUPT_FLAG_DPL0 = 0 << 5,
     INTERRUPT_FLAG_DPL3 = 3 << 5,
@@ -93,4 +94,5 @@ struct interrupt_descriptor_table_pointer
 typedef struct interrupt_descriptor_table_pointer idt_ptr_t;
 
 void register_interrupt_descriptor_table();
-void set_interrupt_descriptor(enum interrupt_vector_index index, uint32_t handler);
+void add_flag(uint8_t* flags, enum interrupt_descriptor_flag flag);
+void set_interrupt_descriptor(enum interrupt_vector_index index, uint32_t handler, uint8_t flags);

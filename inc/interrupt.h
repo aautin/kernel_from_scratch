@@ -9,6 +9,7 @@
 // - the vector number and the error code pushed by the stub (for some
 //   exceptions, the error code is pushed by the CPU instead),
 // - the values pushed by the CPU itself before calling the stub.
+// A privilege transition adds user ESP and SS after EFLAGS.
 //
 struct interrupt_frame
 {
