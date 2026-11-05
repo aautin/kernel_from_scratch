@@ -23,6 +23,7 @@ C_SRC_FILES  := kernel/boot/main \
 				kernel/interrupt/idt \
 				kernel/interrupt/pic \
 				kernel/interrupt/interrupt \
+				kernel/interrupt/systemcall \
 				kernel/interrupt/handler/keyboard \
 				kernel/interrupt/handler/mouse \
 				\
