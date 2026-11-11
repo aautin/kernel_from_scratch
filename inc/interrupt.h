@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 //
 // What the stack holds when the dispatcher is called, from the last value
@@ -48,3 +49,8 @@ void interrupt_register(uint8_t vector, interrupt_handler_t handler);
 // acknowledges the interrupt to the PIC if it is an IRQ.
 //
 void interrupt_dispatch(interrupt_frame_t* frame);
+
+//
+// True while an interrupt handler runs.
+//
+bool interrupt_is_active();

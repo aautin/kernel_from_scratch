@@ -25,6 +25,7 @@ C_SRC_FILES  := kernel/boot/main \
 				kernel/interrupt/interrupt \
 				kernel/interrupt/handler/keyboard \
 				kernel/interrupt/handler/mouse \
+				kernel/interrupt/handler/timer \
 				\
 				kernel/io/vga \
 				kernel/io/port \
@@ -33,6 +34,7 @@ C_SRC_FILES  := kernel/boot/main \
 				\
 				kernel/terminal \
 				kernel/shell \
+				kernel/signal \
 				kernel/stack \
 				\
 				kernel/helper/char \

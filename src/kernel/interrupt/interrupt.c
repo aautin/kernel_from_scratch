@@ -15,6 +15,12 @@ extern uint32_t irq_stub_table[PIC_IRQ_COUNT];
 
 static interrupt_handler_t handlers[IDT_SIZE];
 
+//
+// Number of interrupts being handled, nested when an exception occurs in a
+// handler
+//
+static volatile uint32_t depth = 0;
+
 void interrupt_init()
 {
 	for (uint32_t vector = 0; vector < EXCEPTION_COUNT; vector++)
@@ -29,10 +35,17 @@ void interrupt_register(uint8_t vector, interrupt_handler_t handler)
 	handlers[vector] = handler;
 }
 
+bool interrupt_is_active()
+{
+	return depth > 0;
+}
+
 void interrupt_dispatch(interrupt_frame_t* frame)
 {
+	depth++;
 	if (handlers[frame->vector])
 		handlers[frame->vector](frame);
+	depth--;
 
 	//
 	// Only IRQs are acknowledged to the PIC: CPU exceptions and
