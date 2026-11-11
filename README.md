@@ -36,7 +36,7 @@ The Docker image installs the ISO-specific packages itself:
 ### Commands
 
 ```sh
-# Build kfs.elf, place it in the ISO tree, and create iso/bootable_kernel.iso
+# Build kfs.elf and write iso/bootable_kernel.iso
 make
 
 # Build and boot the ISO in an i386 QEMU machine
@@ -45,12 +45,14 @@ make run
 # Remove intermediate objects
 make clean
 
-# Remove objects, the ELF, and the ISO directory contents
+# Remove objects, and the ELF (the ISO is kept)
 make fclean
 
 # Clean and rebuild everything
 make re
 ```
+
+`iso/bootable_kernel.iso` is the committed deliverable: `make` and `make re` overwrite it, `make clean` and `make fclean` never remove it, and it can be booted directly with `qemu-system-i386 -cdrom iso/bootable_kernel.iso`.
 
 The build pipeline is:
 
