@@ -12,12 +12,16 @@ void register_interrupt_descriptor_table()
 	asm volatile("lidt %0" : : "m" (idt_ptr));
 }
 
-void set_interrupt_descriptor(enum interrupt_vector_index index, uint32_t handler)
+void add_flag(uint8_t* flags, enum interrupt_descriptor_flag flag)
+{
+	*flags |= flag;
+}
+
+void set_interrupt_descriptor(enum interrupt_vector_index index, uint32_t handler, uint8_t flags)
 {
 	idt[index].base_low  = (uint16_t) (handler & 0xFFFF);
 	idt[index].selector  = (selector_offset) KERNEL_CODE_OFFSET;
 	idt[index].zero      = 0;
-	idt[index].flags     = INTERRUPT_FLAG_PRESENT | INTERRUPT_FLAG_DPL0
-						 | INTERUPT_FLAG_32BIT_INTERRUPT_GATE;
+	idt[index].flags     = flags;
 	idt[index].base_high = (uint16_t) ((handler >> 16) & 0xFFFF);
 }

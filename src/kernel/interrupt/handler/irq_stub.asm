@@ -35,6 +35,12 @@ section .text
 	IRQ_STUB 14
 	IRQ_STUB 15
 
+	global syscall_stub
+	syscall_stub:
+		push 0
+		push 0x80
+		jmp interrupt_common_stub
+
 	; Shared by the IRQ stubs and the exception stubs (exception_stub.asm).
 	global interrupt_common_stub
 	interrupt_common_stub:

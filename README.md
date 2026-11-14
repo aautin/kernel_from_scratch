@@ -128,7 +128,7 @@ The linker script places the GDT section near `0x800`, loads the Multiboot heade
 
 The kernel creates a Global Descriptor Table (GDT) containing null, kernel code/data/stack, and user code/data/stack descriptors. The user descriptors are prepared for future work; this repository does not switch to user mode.
 
-The Interrupt Descriptor Table (IDT) has 256 entries, but this version installs only the 16 hardware IRQ gates. The legacy 8259A Programmable Interrupt Controller is remapped so hardware IRQs do not overlap CPU exception vectors:
+The Interrupt Descriptor Table (IDT) installs the 16 hardware IRQ gates and a syscall gate at vector `0x80`. Hardware IRQs use present 32-bit interrupt gates with DPL0. The syscall gate is a present 32-bit interrupt gate with DPL3, so a future ring-3 caller can invoke it with `int $0x80`. The legacy 8259A Programmable Interrupt Controller is remapped so hardware IRQs do not overlap CPU exception vectors:
 
 ```text
 CPU exceptions     0x00 - 0x1F
@@ -136,7 +136,9 @@ Master PIC IRQs    0x20 - 0x27   (IRQ1 keyboard = 0x21)
 Slave PIC IRQs     0x28 - 0x2F   (IRQ12 mouse = 0x2C)
 ```
 
-Each IRQ has a small assembly stub that pushes its vector number, then jumps to a common stub. The common stub saves the registers and calls `interrupt_dispatch`, which calls the C handler registered for that vector with `interrupt_register`, then sends an End Of Interrupt command to the PIC (to both PICs for slave IRQs). The common stub then restores the registers and returns with `iretd`. The keyboard handler reads port `0x60` and only stores the scan code in a key buffer: the mouse handler turns wheel movements into Up/Down arrow scan codes in the same buffer, and the main loop in `kernel_main` handles the buffered keys and runs the shell commands outside of the interrupt, then waits in `hlt` for the next key.
+Each IRQ has a small assembly stub that pushes its vector number, then jumps to a common stub. The syscall stub uses the same frame and pushes vector `0x80`; it does not send a PIC acknowledgement. The common stub saves the registers and calls `interrupt_dispatch`, which calls the C handler registered for that vector with `interrupt_register`, then sends an End Of Interrupt command only for hardware PIC vectors (to both PICs for slave IRQs). The common stub then restores the registers and returns with `iretd`. The keyboard handler reads port `0x60` and only stores the scan code in a key buffer: the mouse handler turns wheel movements into Up/Down arrow scan codes in the same buffer, and the main loop in `kernel_main` handles the buffered keys and runs the shell commands outside of the interrupt, then waits in `hlt` for the next key.
+
+The initial syscall ABI follows the conventional i386 register layout: `EAX` contains the syscall number, `EBX` through `EBP` contain up to six arguments, and `EAX` contains the return value. Syscall `0` returns the kernel syscall ABI version (`1`); unsupported syscall numbers return `-ENOSYS` (`-38`). This change implements the kernel-side gate and dispatch handling only: the kernel still does not switch to ring 3 or boot a user-mode caller.
 
 **Why did we setup this whole interrupt environment?** 
 The kernel is now ready to receive keyboard input asynchronously, without polling. The CPU can `hlt` until a key is pressed, and the keyboard interrupt will wake it up. This method has several advantages over polling:

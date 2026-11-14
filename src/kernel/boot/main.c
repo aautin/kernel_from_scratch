@@ -3,6 +3,7 @@
 #include "gdt.h"
 #include "pic.h"
 #include "shell.h"
+#include "systemcall.h"
 #include "terminal.h"
 #include "keyboard.h"
 #include "mouse.h"
@@ -22,9 +23,10 @@ void kernel_main(multiboot_info_t* mbi)
 	interrupt_init();
 	interrupt_register(INTERRUPT_VECTOR_KEYBOARD, keyboard_interrupt_handler);
 	interrupt_register(INTERRUPT_VECTOR_MOUSE, mouse_interrupt_handler);
+	interrupt_register(INTERRUPT_VECTOR_SYSCALL, syscall_dispatch);
 	panic_init();
 	mouse_init();
-	register_interrupt_descriptor_table();	
+	register_interrupt_descriptor_table();
 
 	//
 	// Enable interrupts
