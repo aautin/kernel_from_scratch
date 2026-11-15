@@ -27,6 +27,7 @@ C_SRC_FILES  := kernel/boot/main \
 				kernel/interrupt/handler/keyboard \
 				kernel/interrupt/handler/mouse \
 				kernel/interrupt/handler/timer \
+				kernel/interrupt/handler/exception \
 				\
 				kernel/io/vga \
 				kernel/io/port \

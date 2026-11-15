@@ -9,6 +9,7 @@
 #include "mouse.h"
 #include "interrupt.h"
 #include "panic.h"
+#include "exception.h"
 #include "cpu.h"
 #include "timer.h"
 #include "signal.h"
@@ -28,6 +29,7 @@ void kernel_main(multiboot_info_t* mbi)
 	interrupt_register(INTERRUPT_VECTOR_MOUSE, mouse_interrupt_handler);
 	interrupt_register(INTERRUPT_VECTOR_SYSCALL, syscall_dispatch);
 	panic_init();
+	exception_init();
 	mouse_init();
 	timer_init();
 	register_interrupt_descriptor_table();

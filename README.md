@@ -142,6 +142,27 @@ Each IRQ has a small assembly stub that pushes its vector number, then jumps to 
 
 The initial syscall ABI follows the conventional i386 register layout: `EAX` contains the syscall number, `EBX` through `EBP` contain up to six arguments, and `EAX` contains the return value. Syscall `0` returns the kernel syscall ABI version (`1`); unsupported syscall numbers return `-ENOSYS` (`-38`). This change implements the kernel-side gate and dispatch handling only: the kernel still does not switch to ring 3 or boot a user-mode caller.
 
+### CPU exception policy
+
+The exception stubs normalize the CPU and stub-pushed values into an
+`interrupt_frame_t`. Exceptions with a CPU error code preserve it in
+`frame->error_code`; exceptions without one receive a zero value from their
+stub. CPU exceptions do not belong to the PIC, so they never receive a PIC
+EOI.
+
+The kernel follows the i386 fault/trap return rules:
+
+| Vectors | Examples | Behavior |
+| --- | --- | --- |
+| `0x00`, `0x01`, `0x02`, `0x05`-`0x13`, `0x0f` | Divide error, invalid opcode, double fault, general protection fault | Panic and halt; never return to re-execute the exception |
+| `0x03` | Breakpoint (`int $3`) | Queue `SIGNAL_TRAP` (`SIGTRAP`, 5), then return with `iretd` |
+| `0x04` | Overflow (`INTO`) | Queue `SIGNAL_SEGMENTATION_FAULT` (`SIGSEGV`, 11), then return with `iretd` |
+
+For the two traps, the CPU has already saved the address of the next
+instruction, so the handler leaves `EIP` and the rest of the saved frame
+unchanged. Signal callbacks are delivered later by the main loop, outside the
+interrupt handler.
+
 **Why did we setup this whole interrupt environment?** 
 The kernel is now ready to receive keyboard input asynchronously, without polling. The CPU can `hlt` until a key is pressed, and the keyboard interrupt will wake it up. This method has several advantages over polling:
 - CPU cycles are not wasted checking for input when there is none
