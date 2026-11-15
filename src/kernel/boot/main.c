@@ -8,24 +8,12 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "interrupt.h"
+#include "panic.h"
+#include "cpu.h"
 #include "timer.h"
 #include "signal.h"
 
 extern void register_gdt();
-
-static void hang()
-{
-	//
-	// Clear-interrupt-flag makes sure that no interrupts are received by the CPU
-	// Halt puts the CPU in a sleep mode until an interrupt is received. The combination
-	// of 'cli' and 'hlt' makes sure to stuck the CPU in sleep mode until shutdown/reboot
-	//
-	while (true)
-	{
-		__asm__ volatile ("cli");
-		__asm__ volatile ("hlt");
-	}
-}
 
 void kernel_main(multiboot_info_t* mbi)
 {
@@ -39,10 +27,10 @@ void kernel_main(multiboot_info_t* mbi)
 	interrupt_register(INTERRUPT_VECTOR_KEYBOARD, keyboard_interrupt_handler);
 	interrupt_register(INTERRUPT_VECTOR_MOUSE, mouse_interrupt_handler);
 	interrupt_register(INTERRUPT_VECTOR_SYSCALL, syscall_dispatch);
-
+	panic_init();
 	mouse_init();
 	timer_init();
-	register_interrupt_descriptor_table();	
+	register_interrupt_descriptor_table();
 
 	//
 	// Enable interrupts
@@ -69,5 +57,5 @@ void kernel_main(multiboot_info_t* mbi)
 		__asm__ volatile ("sti");
 	}
 
-	hang();
+	cpu_halt();
 }
