@@ -9,6 +9,13 @@
 #define SIGNAL_COUNT      32
 #define SIGNAL_QUEUE_SIZE 32
 
+//
+// Exception signals use the i386 Linux/POSIX values:
+// SIGTRAP = 5 and SIGSEGV = 11.
+//
+#define SIGNAL_TRAP                         5
+#define SIGNAL_SEGMENTATION_FAULT           11
+
 typedef void (*signal_handler_t)(uint8_t number);
 
 enum signal_status
