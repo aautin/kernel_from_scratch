@@ -88,7 +88,12 @@ After `make run`, GRUB loads `kfs.elf` and the screen shows the `$ ` prompt. Com
 | `halt` | Clear the registers and stop the CPU (`cli; hlt`) |
 | `read` | Arm a one-line read, then print that next entered line |
 | `azerty` / `qwerty` | Switch the keyboard layout |
-| `signal` | Test the signal facility: immediate and scheduled delivery, invalid numbers and queue overflow |
+| `raise` | Signal: deliver signal 1 immediately, then show the unregistered and out-of-range errors |
+| `schedule` | Signal: deliver signal 1 one second later, then show the queue overflow |
+| `int3` | Trap: `int $3` queues `SIGTRAP` (5), and the command resumes |
+| `into` | Trap: `into` with the overflow flag set queues `SIGSEGV` (11), and the command resumes |
+| `div0` | Fault: divide by zero, the kernel panics and halts |
+| `gpf` | Fault: load an invalid selector into `DS`, the kernel panics and halts |
 
 Keyboard controls:
 
@@ -98,6 +103,10 @@ Keyboard controls:
 - `Enter` executes the current input line.
 - `Ctrl + 0–9` switches screen (each screen has its own color).
 - `Key Up` and `Key Down`, or the mouse wheel, scroll the current terminal buffer.
+
+### Exception and signal demonstrations
+
+The output lines of `raise`, `schedule`, `int3` and `into` start with their kind: `[raise]`, `[schedule]`, `[trap]`, and `[signal]` when a callback runs. That last line says whether the signal was delivered immediately, inside the command, or later by the main loop, after the prompt. The shell stays usable after these commands. `div0` and `gpf` show the panic screen and halt the CPU, so QEMU has to be restarted after them.
 
 ## How the kernel works
 
@@ -230,6 +239,5 @@ We identified the following areas for future work that anyone is welcome to cont
 
 - Paging and a general physical/virtual memory allocator.
 - User mode, processes, threads, scheduling, and system calls.
-- CPU exception handlers beyond the default hardware behavior.
 - Disks, filesystems, networking, USB, and modern display output.
 - A libc, command parsing with arguments, or persistent storage.
