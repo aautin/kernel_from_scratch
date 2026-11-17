@@ -92,7 +92,7 @@ $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c
 $(ISO): $(NAME) $(GRUB_CFG)
 	docker build -t $(DOCKER_IMAGE) -f $(DOCKERFILE) .
 	mkdir -p $(dir $@)
-	docker run --rm --user $(shell id -u):$(shell id -g) -v "$(CURDIR):/workspace" -w /workspace $(DOCKER_IMAGE) $(DOCKER_CMD)
+	docker run --rm --userns=keep-id -v "$(CURDIR):/workspace" -w /workspace $(DOCKER_IMAGE) $(DOCKER_CMD)
 
 run: $(ISO)
 	qemu-system-i386 -cdrom $(ISO)
